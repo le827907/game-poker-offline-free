@@ -238,6 +238,11 @@ export default function App() {
     }
   };
 
+  const allWinningCards = React.useMemo(() => {
+    if (!state || state.handInProgress || !state.winners) return [];
+    return state.winners.flatMap(w => w.winningCards || []);
+  }, [state?.winners, state?.handInProgress]);
+
   if (!state) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Đang tải...</div>;
 
   const activePlayersCount = state.players.filter(p => p.chips > 0).length;
@@ -266,11 +271,6 @@ export default function App() {
     "top-[15%] right-[-2%] sm:right-[-5%]",      // Top Right
     "top-[85%] right-[-2%] sm:right-[-5%]",      // Bottom Right
   ];
-
-  const allWinningCards = React.useMemo(() => {
-    if (!state || state.handInProgress || !state.winners) return [];
-    return state.winners.flatMap(w => w.winningCards || []);
-  }, [state?.winners, state?.handInProgress]);
 
   const isCardWinning = (card: Card) => {
     return allWinningCards.some(wc => wc.rank === card.rank && wc.suit === card.suit);
