@@ -518,7 +518,7 @@ export default function App() {
         </div>
 
         {/* Hand History Panel */}
-        <div className="w-full md:w-80 bg-slate-900 border border-slate-800 rounded-xl flex flex-col h-64 md:h-auto shadow-xl overflow-hidden">
+        <div className="w-full md:w-80 bg-slate-900 border border-slate-800 rounded-xl flex flex-col h-64 md:h-full md:max-h-[600px] shadow-xl overflow-hidden shrink-0">
           <div className="p-4 border-b border-slate-800 bg-slate-900 flex justify-between items-center">
             <h3 className="font-bold text-slate-200 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
@@ -531,7 +531,7 @@ export default function App() {
               return (
                 <div 
                   key={i} 
-                  className={`text-sm p-2 rounded-lg leading-relaxed ${
+                  className={`text-sm p-2 rounded-lg leading-relaxed break-words ${
                     i === 0 
                       ? 'bg-slate-800 border-l-2 border-blue-500 text-white font-medium' 
                       : isHighlight 
