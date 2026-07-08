@@ -1,4 +1,4 @@
-import { GameState, ActionType, Action, Card } from './types';
+import { GameState, ActionType, Action, Card, Player } from './types';
 import { evaluateHand } from './evaluator';
 
 const rankToValue = (rank: string): number => {
@@ -21,14 +21,13 @@ export function decideBotAction(state: GameState): Action {
   };
 
   const difficulty = state.difficulty || 'normal';
-
-  // Basic fallback logic for easy/passive mode
-  if (difficulty === 'easy') {
-    const rand = Math.random();
-    if (callAmount >= actor.chips) return rand < 0.9 ? { type: 'fold' } : { type: 'all-in' };
-    if (canCheck) return rand < 0.1 ? safeRaise(state.minRaise) : { type: 'check' };
-    return rand < 0.6 ? { type: 'fold' } : { type: 'call' };
-  }
+  const rawProfile = actor.botProfile || 'balanced';
+  
+  let profile = 'balanced';
+  if (rawProfile === 'tight') profile = 'tight';
+  else if (rawProfile === 'aggressive') profile = 'aggressive';
+  else if (rawProfile === 'loose') profile = 'calling_station';
+  else if (rawProfile === 'passive') profile = 'tricky';
 
   // Evaluate Hand Strength
   const holeCards = actor.cards;
@@ -46,6 +45,7 @@ export function decideBotAction(state: GameState): Action {
   else if (maxCard >= 10 && minCard >= 9) preflopStrength = 5;
   else if (isSuited && maxCard >= 10) preflopStrength += 2;
   else if (maxCard - minCard <= 2 && minCard >= 6) preflopStrength = 4;
+  else preflopStrength = 1;
 
   let postflopRank = 0;
   if (state.board.length > 0) {
@@ -58,99 +58,175 @@ export function decideBotAction(state: GameState): Action {
   const isShortStack = actor.chips < state.bigBlind * 10;
   const rand = Math.random();
 
-  // Adjust aggression based on difficulty and profile
-  let aggressionMod = difficulty === 'expert' ? 1.5 : difficulty === 'hard' ? 1.2 : 1.0;
-  if (actor.botProfile === 'aggressive') aggressionMod *= 1.3;
-  if (actor.botProfile === 'passive') aggressionMod *= 0.5;
-
-  // Exploit human tendencies
-  if (state.humanStats.handsPlayed > 10) {
-    const vpipRate = state.humanStats.vpip / state.humanStats.handsPlayed;
-    const pfrRate = state.humanStats.pfr / state.humanStats.handsPlayed;
-    
-    if (vpipRate > 0.6) {
-      // Human plays too many hands (calls too much) -> value bet more, bluff less
-      aggressionMod *= 1.2; // Value bet harder
-    } else if (vpipRate < 0.2) {
-      // Human is very tight -> bluff more
-      if (difficulty === 'expert' || difficulty === 'hard') {
-         aggressionMod *= 1.4;
-      }
-    }
-  }
-
-  // Preflop Strategy
-  if (state.street === 'preflop') {
-    if (preflopStrength >= 8) {
-      if (canRaise) return safeRaise(Math.max(state.minRaise, state.currentHighestBet * 3));
-      return { type: 'all-in' };
-    }
-    if (preflopStrength >= 5) {
-      if (canRaise && rand < 0.3 * aggressionMod) return safeRaise(state.minRaise);
-      if (potOdds < 0.4 && callAmount <= state.bigBlind * 4) return { type: 'call' };
-    }
-    if (preflopStrength >= 3 && callAmount <= state.bigBlind * 2 && activePlayers > 2) {
-      return { type: 'call' }; // Speculate in multiway pots
-    }
-    if (isShortStack && preflopStrength >= 6 && rand < 0.5) return { type: 'all-in' };
-
-    return canCheck ? { type: 'check' } : { type: 'fold' };
-  }
-
-  // Postflop Strategy
   let handValue = 0; // 0 to 10
-  if (postflopRank >= 4) handValue = 9; // Trips+
-  else if (postflopRank === 3) handValue = 7; // Two pair
-  else if (postflopRank === 2) {
-     // Check if top pair
-     const boardMax = Math.max(...state.board.map(c => rankToValue(c.rank)));
-     if (maxCard >= boardMax || isPair) handValue = 6;
-     else handValue = 4; // Mid/bottom pair
-  } else {
-     handValue = 1; // High card
-  }
-
-  // Draw detection (basic heuristic for flush/straight draws)
-  const allSuits = [...holeCards, ...state.board].map(c => c.suit);
-  const suitCounts = allSuits.reduce((acc, suit) => { acc[suit] = (acc[suit] || 0) + 1; return acc; }, {} as any);
-  const hasFlushDraw = Object.values(suitCounts).some((c: any) => c === 4);
+  let hasDraw = false;
   
-  if (hasFlushDraw && handValue < 5) handValue = 5;
+  if (state.street !== 'preflop') {
+      if (postflopRank >= 4) handValue = 9; // Trips+
+      else if (postflopRank === 3) handValue = 7; // Two pair
+      else if (postflopRank === 2) { 
+         const boardMax = Math.max(...state.board.map(c => rankToValue(c.rank)));
+         if (maxCard >= boardMax || isPair) handValue = 6; // Top pair or overpair
+         else handValue = 4; // Mid/bottom pair
+      } else {
+         handValue = 2; // High card
+      }
 
-  // Decision Logic
-  if (handValue >= 7) {
-    // Very strong
-    if (canRaise && rand < 0.7 * aggressionMod) return safeRaise(Math.max(state.minRaise, state.pot * 0.75));
-    if (callAmount > 0) return { type: 'call' };
-    return canRaise ? safeRaise(state.minRaise) : { type: 'check' };
+      // Basic draw detection (flush)
+      const allSuits = [...holeCards, ...state.board].map(c => c.suit);
+      const suitCounts = allSuits.reduce((acc, suit) => { acc[suit] = (acc[suit] || 0) + 1; return acc; }, {} as any);
+      hasDraw = Object.values(suitCounts).some((c: any) => c === 4);
+      if (hasDraw && handValue < 5) handValue = 5;
+  }
+
+  const strength = state.street === 'preflop' ? preflopStrength : handValue;
+
+  // Apply difficulty modifiers
+  let strengthMod = 0;
+  if (difficulty === 'easy') {
+    // Easy mode: overvalues weak hands slightly, undervalues strong hands (makes mistakes)
+    strengthMod = rand < 0.3 ? 2 : (rand > 0.8 ? -2 : 0);
+  } else if (difficulty === 'hard' || difficulty === 'expert') {
+    // Hard mode: demands better hands to continue, punishes weakness
+    if (callAmount > state.pot * 0.5) strengthMod = -1; // Tighter against large bets
+  }
+
+  const effStrength = Math.max(0, Math.min(10, strength + strengthMod));
+
+  // Determine actions based on profile
+  const executeAction = (): Action => {
+      switch (profile) {
+          case 'tight':
+              return tightLogic();
+          case 'aggressive':
+              return aggressiveLogic();
+          case 'calling_station':
+              return callingStationLogic();
+          case 'tricky':
+              return trickyLogic();
+          case 'balanced':
+          default:
+              return balancedLogic();
+      }
+  };
+
+  function tightLogic(): Action {
+      // Plays fewer hands, folds weak hands, raises strong
+      if (effStrength >= 8) {
+          if (canRaise && rand < 0.8) return safeRaise(Math.max(state.minRaise, state.pot * 0.75));
+          if (callAmount > 0) return { type: 'call' };
+          return canRaise && rand < 0.5 ? safeRaise(state.minRaise) : { type: 'check' };
+      }
+      if (effStrength >= 5) {
+          if (potOdds < 0.3) return { type: 'call' };
+          if (callAmount === 0) return { type: 'check' };
+          return { type: 'fold' };
+      }
+      return canCheck ? { type: 'check' } : { type: 'fold' };
+  }
+
+  function aggressiveLogic(): Action {
+      // Bets and raises more often, applies pressure, occasionally bluffs
+      if (effStrength >= 6) {
+          if (canRaise && rand < 0.8) return safeRaise(Math.max(state.minRaise, state.pot));
+          return callAmount > 0 ? { type: 'call' } : { type: 'check' };
+      }
+      if (effStrength >= 4 || hasDraw) {
+          if (canRaise && rand < 0.4) return safeRaise(state.minRaise); // Semi-bluff
+          if (potOdds < 0.4) return { type: 'call' };
+          return canCheck ? { type: 'check' } : { type: 'fold' };
+      }
+      // Pure bluff
+      if (canRaise && rand < 0.2 && activePlayers <= 2) return safeRaise(state.pot * 0.5);
+      return canCheck ? { type: 'check' } : { type: 'fold' };
+  }
+
+  function callingStationLogic(): Action {
+      // Calls more often, rarely folds once invested, raises less
+      if (effStrength >= 7) {
+          if (canRaise && rand < 0.3) return safeRaise(state.minRaise);
+          if (callAmount > 0) return { type: 'call' };
+          return { type: 'check' };
+      }
+      if (effStrength >= 3 || hasDraw || actor.totalInvestment > state.bigBlind * 2) {
+          if (callAmount > 0) return { type: 'call' };
+          return { type: 'check' };
+      }
+      if (canCheck) return { type: 'check' };
+      // Call even weak hands sometimes
+      if (potOdds < 0.4 && rand < 0.5) return { type: 'call' };
+      return { type: 'fold' };
+  }
+
+  function trickyLogic(): Action {
+      // Slow-plays strong hands, bluffs weak hands
+      if (effStrength >= 8) {
+          // Slow play
+          if (rand < 0.6) {
+              if (callAmount > 0) return { type: 'call' };
+              return { type: 'check' };
+          }
+          if (canRaise) return safeRaise(state.pot);
+          return { type: 'call' };
+      }
+      if (effStrength <= 3) {
+          // Bluff
+          if (canRaise && rand < 0.3 && activePlayers <= 3) return safeRaise(state.pot * 0.75);
+          return canCheck ? { type: 'check' } : { type: 'fold' };
+      }
+      // Mid hands played normally
+      if (potOdds < 0.35) return { type: 'call' };
+      return canCheck ? { type: 'check' } : { type: 'fold' };
+  }
+
+  function balancedLogic(): Action {
+      // Normal bot logic
+      if (effStrength >= 7) {
+          if (canRaise && rand < 0.6) return safeRaise(Math.max(state.minRaise, state.pot * 0.5));
+          if (callAmount > 0) return { type: 'call' };
+          return canRaise && rand < 0.3 ? safeRaise(state.minRaise) : { type: 'check' };
+      }
+      if (effStrength >= 4 || hasDraw) {
+          if (callAmount <= state.pot * 0.5 || potOdds < 0.3) {
+              if (canRaise && rand < 0.2) return safeRaise(state.minRaise);
+              return { type: 'call' };
+          }
+          if (hasDraw && potOdds < 0.4) return { type: 'call' };
+          return canCheck ? { type: 'check' } : { type: 'fold' };
+      }
+      if (canCheck) {
+          if (activePlayers <= 2 && rand < 0.1) return safeRaise(state.minRaise); // Occasional stab
+          return { type: 'check' };
+      }
+      return { type: 'fold' };
+  }
+
+  const action = executeAction();
+
+  // All-in override for short stack with decent hand
+  if (isShortStack && effStrength >= 6 && rand < 0.5) {
+      return { type: 'all-in' };
   }
   
-  if (handValue >= 5) {
-    // Medium-strong or draw
-    if (callAmount <= state.pot * 0.5 || potOdds < 0.3) {
-      if (canRaise && rand < 0.2 * aggressionMod) return safeRaise(state.minRaise);
-      return { type: 'call' };
-    }
-    if (callAmount > state.pot * 0.8 && rand > 0.3 * aggressionMod && !hasFlushDraw) return { type: 'fold' };
-    return { type: 'call' };
-  }
-
-  if (handValue >= 4) {
-    // Weak pair
-    if (canCheck) {
-      // Bluff less in multiway pots
-      if (activePlayers <= 2 && rand < 0.2 * aggressionMod) return safeRaise(state.minRaise);
+  // Safety check: ensure we don't accidentally fold when we can check
+  if (action.type === 'fold' && canCheck) {
       return { type: 'check' };
-    }
-    if (callAmount <= state.bigBlind * 2 && potOdds < 0.2) return { type: 'call' };
-    return { type: 'fold' };
-  }
-
-  // Weak hand
-  if (canCheck) {
-    if (activePlayers <= 2 && rand < 0.15 * aggressionMod && state.street === 'flop') return safeRaise(state.pot * 0.5); // C-bet / Bluff
-    return { type: 'check' };
   }
   
-  return { type: 'fold' };
+  // Safety check: ensure we don't call 0 (should be check)
+  if (action.type === 'call' && canCheck) {
+      return { type: 'check' };
+  }
+
+  // Safety check: ensure we don't raise invalid amount
+  if (action.type === 'raise') {
+      if (!action.amount || action.amount < state.minRaise) {
+           action.amount = state.minRaise;
+      }
+      if (action.amount >= maxTotalBet) {
+          return { type: 'all-in' };
+      }
+  }
+
+  return action;
 }

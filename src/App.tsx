@@ -17,7 +17,7 @@ const RulesModal = ({ onClose }: { onClose: () => void }) => (
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
     exit={{ opacity: 0 }}
-    className="absolute inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
   >
     <motion.div 
       initial={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -247,7 +247,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-[200] flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-md"
+            className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-md"
           >
             <motion.h1 
               initial={{ scale: 0.8, y: -20 }}
@@ -499,7 +499,7 @@ export default function App() {
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+                className="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-sm"
               >
                 <div className="bg-slate-900 border border-slate-700 p-8 rounded-xl shadow-2xl text-center max-w-sm w-full mx-4">
                   <h2 className="text-4xl font-black text-red-500 mb-2 uppercase tracking-widest">Hết Chip!</h2>
