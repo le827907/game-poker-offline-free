@@ -1,3 +1,23 @@
+:root {
+  --table-start: #065f46;
+  --table-end: #064e3b;
+}
+
+[data-theme="green"] {
+  --table-start: #065f46;
+  --table-end: #064e3b;
+}
+
+[data-theme="blue"] {
+  --table-start: #1e3a8a;
+  --table-end: #172554;
+}
+
+[data-theme="red"] {
+  --table-start: #7f1d1d;
+  --table-end: #450a0a;
+}
+
 @import "tailwindcss";
 
 @layer utilities {
@@ -18,7 +38,7 @@
   }
   
   .table-surface {
-    background: radial-gradient(circle at 50% 50%, #065f46 0%, #064e3b 100%);
+    background: radial-gradient(circle at 50% 50%, var(--table-start) 0%, var(--table-end) 100%);
     background-size: 200% 200%;
     animation: table-breathe 8s ease-in-out infinite;
   }

@@ -192,6 +192,12 @@ export class SoundManager {
     this.playTone(400, 'sine', 0.1, 0.1);
   }
 
+  public playYourTurn() {
+    if (!this.enabled || !this.ctx) return;
+    this.playTone(880, 'sine', 0.1, 0.4);
+    setTimeout(() => this.playTone(880, 'sine', 0.2, 0.4), 150);
+  }
+
   public playRebuy() {
     this.playTone(800, 'sine', 0.1, 0.3);
     setTimeout(() => this.playTone(1200, 'sine', 0.1, 0.3), 100);

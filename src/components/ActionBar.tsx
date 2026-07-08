@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { GameState, ActionType } from '../poker/types';
 import { cn } from './Card';
 import { motion, AnimatePresence } from 'framer-motion';
+import { soundManager } from '../audio';
 
 interface Props {
   state: GameState;
@@ -12,6 +13,17 @@ interface Props {
 export const ActionBar: React.FC<Props> = ({ state, onAction, onNextHand }) => {
   const actor = state.players[state.currentActorIndex];
   const isPlayerTurn = state.handInProgress && !actor.isBot;
+  
+  // Ref to track if we already played the sound for this turn
+  const prevTurnRef = useRef(false);
+  
+  useEffect(() => {
+    if (isPlayerTurn && !prevTurnRef.current) {
+      soundManager.playYourTurn();
+    }
+    prevTurnRef.current = isPlayerTurn;
+  }, [isPlayerTurn]);
+
   
   const callAmount = state.currentHighestBet - actor.currentBet;
   const canCheck = callAmount === 0;
@@ -44,12 +56,6 @@ export const ActionBar: React.FC<Props> = ({ state, onAction, onNextHand }) => {
         isPlayerTurn ? "border-emerald-500" : "border-slate-800"
       )}
     >
-      <div className={cn(
-        "absolute -top-4 text-xs font-bold px-3 py-1 rounded-full shadow-md uppercase tracking-wider",
-        isPlayerTurn ? "bg-emerald-500 text-slate-900 animate-bounce" : "bg-slate-800 text-slate-400 border border-slate-700"
-      )}>
-        {isPlayerTurn ? "Đến lượt bạn" : !state.handInProgress ? "Chờ ván mới..." : `Chờ ${actor.name}...`}
-      </div>
       <div className="max-w-6xl w-full mx-auto flex flex-col sm:flex-row gap-4 sm:gap-8 justify-between items-center">
         
         {/* Raise Slider / Input */}

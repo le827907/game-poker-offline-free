@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GameState, ActionType, Action, Card } from './poker/types';
 import { initGame, startHand, processAction, STARTING_CHIPS } from './poker/engine';
-import { evaluateHand, translateHandDescr } from './poker/evaluator';
+import { evaluateHand, translateHandDescr, calculateWinProbability } from './poker/evaluator';
 import { decideBotAction } from './poker/bot';
 import { PlayerSeat } from './components/PlayerSeat';
 import { ActionBar } from './components/ActionBar';
@@ -12,6 +12,52 @@ import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { Volume2, VolumeX } from 'lucide-react';
 
 import { soundManager } from './audio';
+
+const PLAYER_COLORS = ['#3b82f6', '#ef4444', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
+
+const PotPieChart = ({ players, pot }: { players: import('./poker/types').Player[], pot: number }) => {
+  if (pot === 0) return null;
+
+  let currentAngle = 0;
+  const segments = players.filter(p => p.totalInvestment > 0).map((p, index) => {
+    const percentage = (p.totalInvestment / pot) * 100;
+    const startAngle = currentAngle;
+    const endAngle = currentAngle + percentage;
+    currentAngle = endAngle;
+    
+    return {
+      name: p.name,
+      amount: p.totalInvestment,
+      color: PLAYER_COLORS[players.indexOf(p) % PLAYER_COLORS.length],
+      start: startAngle,
+      end: endAngle,
+      percentage
+    };
+  });
+
+  const gradientString = segments.map(s => `${s.color} ${s.start}% ${s.end}%`).join(', ');
+
+  return (
+    <div 
+      className="w-5 h-5 rounded-full border border-slate-700 shadow-md relative group cursor-help ml-2 shrink-0"
+      style={{ background: `conic-gradient(${gradientString})` }}
+    >
+      <div className="absolute hidden group-hover:block bottom-full left-1/2 -translate-x-1/2 mb-2 bg-slate-900 text-white text-xs p-2 rounded shadow-xl border border-slate-700 w-max z-[100]">
+        <div className="font-bold mb-1 border-b border-slate-700 pb-1 text-slate-300">Đóng góp Pot</div>
+        {segments.map((s, i) => (
+          <div key={i} className="flex justify-between gap-4 items-center mt-1">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: s.color }} />
+              <span className="font-medium text-slate-200">{s.name}</span>
+            </div>
+            <span className="font-mono text-emerald-400">${s.amount} <span className="text-slate-500 text-[10px]">(${Math.round(s.percentage)}%)</span></span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 
 const RulesModal = ({ onClose }: { onClose: () => void }) => (
   <motion.div 
@@ -63,6 +109,7 @@ const RulesModal = ({ onClose }: { onClose: () => void }) => (
 
 export default function App() {
   const [state, setState] = useState<GameState | null>(null);
+  const [winProbability, setWinProbability] = useState<number | null>(null);
   const [bankroll, setBankroll] = useState(5000);
   const [sessionStats, setSessionStats] = useState({
     handsPlayed: 0,
@@ -72,6 +119,12 @@ export default function App() {
   const [showStartScreen, setShowStartScreen] = useState(true);
   const [showRules, setShowRules] = useState(false);
   const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard' | 'expert'>('expert');
+  const [theme, setTheme] = useState<'green' | 'blue' | 'red'>('green');
+  
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+  
   
   const [soundEnabled, setSoundEnabled] = useState(soundManager.isEnabled());
 
@@ -274,6 +327,28 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    if (!state || !state.handInProgress || !state.players[0] || state.players[0].hasFolded || !state.players[0].isActive) {
+      setWinProbability(null);
+      return;
+    }
+    
+    const humanPlayer = state.players[0];
+    const numOpponents = state.players.filter(p => p.id !== humanPlayer.id && !p.hasFolded && p.isActive).length;
+    if (numOpponents === 0) {
+      setWinProbability(1);
+      return;
+    }
+    
+    // Calculate off main thread with a small delay to avoid blocking render
+    const timer = setTimeout(() => {
+      const prob = calculateWinProbability(humanPlayer.cards, state.board, numOpponents, 500);
+      setWinProbability(prob);
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [state?.board, state?.handInProgress, state?.players]);
+
   if (!state) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Đang tải...</div>;
 
   const activePlayersCount = state.players.filter(p => p.chips > 0).length;
@@ -353,6 +428,18 @@ export default function App() {
                   <option value="normal">Bình thường</option>
                   <option value="hard">Khó</option>
                   <option value="expert">Cực khó</option>
+                </select>
+              </div>
+              <div className="bg-slate-800 p-2 rounded-xl flex flex-col items-center gap-2">
+                <span className="text-sm text-slate-400 font-bold uppercase tracking-widest">Giao diện (Màu bàn)</span>
+                <select 
+                  value={theme} 
+                  onChange={(e) => setTheme(e.target.value as 'green' | 'blue' | 'red')}
+                  className="bg-slate-900 border border-slate-700 text-white rounded-lg px-4 py-2 w-full text-center outline-none focus:border-blue-500 font-medium"
+                >
+                  <option value="green">Classic Green</option>
+                  <option value="blue">Royal Blue</option>
+                  <option value="red">Deep Red</option>
                 </select>
               </div>
               <button 
@@ -466,6 +553,7 @@ export default function App() {
                 className="mb-4 bg-black/50 px-6 py-2 rounded-full text-white font-bold text-xl backdrop-blur-sm border border-emerald-700/50 flex items-center gap-2 shadow-lg"
               >
                 <span className="text-emerald-400">Tổng:</span> ${state.pot}
+                <PotPieChart players={state.players} pot={state.pot} />
               </motion.div>
 
               {/* Side Pots */}
@@ -521,6 +609,7 @@ export default function App() {
                   winAmount={winAmount}
                   isSplit={isSplit}
                   handStrength={i === 0 ? currentHandStrength : null}
+                  winProbability={i === 0 ? winProbability : null}
                 />
               );
             })}

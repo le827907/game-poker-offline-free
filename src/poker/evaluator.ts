@@ -1,5 +1,6 @@
 import * as Hand from 'pokersolver';
 import { Card } from './types';
+import { createDeck, shuffleDeck } from './deck';
 
 // pokersolver uses format like 'As', 'Td', '5c'
 function toSolverFormat(card: Card): string {
@@ -61,4 +62,57 @@ export function evaluateWinners(players: { id: string, cards: Card[] }[], boardC
       winningCards
     };
   });
+}
+
+export function calculateWinProbability(
+  holeCards: Card[],
+  boardCards: Card[],
+  numOpponents: number,
+  iterations = 500
+): number {
+  if (holeCards.length !== 2) return 0;
+  
+  const knownCards = [...holeCards, ...boardCards];
+  const knownCardIds = new Set(knownCards.map(c => c.id));
+  
+  // Create remaining deck
+  const deck = createDeck().filter(c => !knownCardIds.has(c.id));
+  
+  let wins = 0;
+  let ties = 0;
+
+  for (let i = 0; i < iterations; i++) {
+    // Shuffle remaining deck for this iteration
+    const shuffledDeck = shuffleDeck(deck);
+    let cardIndex = 0;
+
+    // Deal to opponents
+    const players = [{ id: 'hero', cards: holeCards }];
+    for (let j = 0; j < numOpponents; j++) {
+      players.push({
+        id: `villain_${j}`,
+        cards: [shuffledDeck[cardIndex++], shuffledDeck[cardIndex++]]
+      });
+    }
+
+    // Deal remaining board cards
+    const simBoard = [...boardCards];
+    while (simBoard.length < 5) {
+      simBoard.push(shuffledDeck[cardIndex++]);
+    }
+
+    // Evaluate
+    const winners = evaluateWinners(players, simBoard);
+    
+    // Check if hero won
+    if (winners.some(w => w.id === 'hero')) {
+      if (winners.length === 1) {
+        wins++; // Outright win
+      } else {
+        ties += 1 / winners.length; // Tie
+      }
+    }
+  }
+
+  return (wins + ties) / iterations;
 }

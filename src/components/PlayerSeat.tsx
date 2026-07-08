@@ -17,9 +17,45 @@ interface Props {
   winAmount?: number;
   isSplit?: boolean;
   handStrength?: string | null;
+  winProbability?: number | null;
 }
 
-export const PlayerSeat: React.FC<Props> = ({ player, isCurrentActor, isDealer, isSmallBlind, isBigBlind, positionClass, isTop, actionBadge, isThinking, isWinner, winAmount, isSplit, handStrength }) => {
+
+const PlayerAvatar = ({ seed, className }: { seed: string, className?: string }) => {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const colors1 = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#eab308'];
+  const colors2 = ['#7f1d1d', '#1e3a8a', '#064e3b', '#78350f', '#4c1d95', '#831843', '#164e63', '#713f12'];
+  
+  const c1 = colors1[Math.abs(hash) % colors1.length];
+  const c2 = colors2[Math.abs(hash >> 3) % colors2.length];
+  
+  const shapes = ['circle', 'square', 'triangle', 'diamond', 'hexagon', 'star'];
+  const shape = shapes[Math.abs(hash >> 5) % shapes.length];
+
+  const renderShape = () => {
+    switch (shape) {
+      case 'circle': return <circle cx="50" cy="50" r="28" fill={c1} opacity="0.8" />;
+      case 'square': return <rect x="22" y="22" width="56" height="56" rx="12" fill={c1} opacity="0.8" />;
+      case 'triangle': return <polygon points="50,15 80,70 20,70" fill={c1} opacity="0.8" />;
+      case 'diamond': return <polygon points="50,15 85,50 50,85 15,50" fill={c1} opacity="0.8" />;
+      case 'hexagon': return <polygon points="50,15 80,32 80,68 50,85 20,68 20,32" fill={c1} opacity="0.8" />;
+      case 'star': return <polygon points="50,10 61,38 90,38 66,55 75,85 50,68 25,85 34,55 10,38 39,38" fill={c1} opacity="0.8" />;
+      default: return <circle cx="50" cy="50" r="28" fill={c1} opacity="0.8" />;
+    }
+  }
+
+  return (
+    <svg viewBox="0 0 100 100" className={className}>
+      <rect width="100" height="100" fill={c2} opacity="0.6" />
+      {renderShape()}
+    </svg>
+  );
+};
+
+export const PlayerSeat: React.FC<Props> = ({ player, isCurrentActor, isDealer, isSmallBlind, isBigBlind, positionClass, isTop, actionBadge, isThinking, isWinner, winAmount, isSplit, handStrength, winProbability }) => {
   return (
     <div className={cn("absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center", positionClass)}>
       
@@ -118,13 +154,22 @@ export const PlayerSeat: React.FC<Props> = ({ player, isCurrentActor, isDealer, 
             <PlayingCard key={player.cards[0].id || `${player.cards[0].rank}-${player.cards[0].suit}`} card={player.cards[0]} hidden={player.isBot} className="-rotate-6 hover:rotate-0 transition-transform origin-bottom-right" delay={0.1} />
             <PlayingCard key={player.cards[1].id || `${player.cards[1].rank}-${player.cards[1].suit}`} card={player.cards[1]} hidden={player.isBot} className="rotate-6 hover:rotate-0 transition-transform origin-bottom-left" delay={0.2} />
             
-            {handStrength && (
+            {(handStrength || (winProbability !== undefined && winProbability !== null)) && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="absolute top-full mt-2 left-1/2 -translate-x-1/2 whitespace-nowrap bg-emerald-900/90 border border-emerald-500/50 text-emerald-300 text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded shadow-lg backdrop-blur-sm tracking-wide"
+                className="absolute top-full mt-2 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 z-20"
               >
-                {handStrength}
+                {handStrength && (
+                  <div className="whitespace-nowrap bg-emerald-900/90 border border-emerald-500/50 text-emerald-300 text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded shadow-lg backdrop-blur-sm tracking-wide">
+                    {handStrength}
+                  </div>
+                )}
+                {winProbability !== undefined && winProbability !== null && (
+                  <div className="whitespace-nowrap bg-blue-900/90 border border-blue-500/50 text-blue-300 text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded shadow-lg backdrop-blur-sm tracking-wide">
+                    Thắng: {(winProbability * 100).toFixed(1)}%
+                  </div>
+                )}
               </motion.div>
             )}
           </motion.div>
@@ -179,19 +224,20 @@ export const PlayerSeat: React.FC<Props> = ({ player, isCurrentActor, isDealer, 
             : { duration: 0.3 }
         }
         className={cn(
-          "relative w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 flex flex-col items-center justify-center text-white shadow-xl transition-colors duration-300 z-30",
-          isWinner ? "bg-yellow-600 border-yellow-400" :
-          isCurrentActor && !player.isBot ? "bg-slate-700" :
-          isCurrentActor && player.isBot ? "bg-slate-700" : "border-slate-600 bg-slate-800",
+          "relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-4 flex flex-col items-center justify-center text-white shadow-xl transition-colors duration-300 z-30 bg-slate-800",
+          isWinner ? "border-yellow-400" :
+          isCurrentActor && !player.isBot ? "border-blue-500" :
+          isCurrentActor && player.isBot ? "border-slate-400" : "border-slate-600",
           !player.isActive ? "opacity-30 grayscale" : player.hasFolded ? "opacity-40 grayscale" : "opacity-100"
         )}
       >
-        <div className="text-xs sm:text-sm font-bold truncate w-11/12 text-center text-slate-100">{player.name}</div>
-        <div className="text-[10px] sm:text-xs font-mono text-emerald-400 mt-0.5">${player.chips}</div>
+        <PlayerAvatar seed={player.name} className="absolute inset-0 w-full h-full z-0 pointer-events-none" />
+        <div className="z-10 text-xs sm:text-sm font-bold truncate w-11/12 text-center text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">{player.name}</div>
+        <div className="z-10 text-[10px] sm:text-xs font-mono text-emerald-400 mt-0.5 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] bg-slate-900/60 px-2 py-0.5 rounded-full">${player.chips}</div>
         
-        {player.isAllIn && <div className="text-[9px] font-black text-red-500 uppercase mt-1 tracking-wider bg-red-500/20 px-2 py-0.5 rounded-full">Tất tay</div>}
-        {player.hasFolded && player.isActive && <div className="text-[9px] font-black text-slate-400 uppercase mt-1 tracking-wider">Đã bỏ bài</div>}
-        {!player.isActive && <div className="text-[9px] font-black text-red-400 uppercase mt-1 tracking-wider">Đã bị loại</div>}
+        {player.isAllIn && <div className="z-10 text-[9px] font-black text-red-500 uppercase mt-1 tracking-wider bg-red-500/90 px-2 py-0.5 rounded-full">Tất tay</div>}
+        {player.hasFolded && player.isActive && <div className="z-10 text-[9px] font-black text-slate-200 uppercase mt-1 tracking-wider bg-slate-800/80 px-2 py-0.5 rounded-full">Đã bỏ bài</div>}
+        {!player.isActive && <div className="z-10 text-[9px] font-black text-red-200 uppercase mt-1 tracking-wider bg-red-900/80 px-2 py-0.5 rounded-full">Đã bị loại</div>}
         
         {/* Buttons (Dealer / Blinds) */}
         <div className="absolute -bottom-2 flex gap-1">
