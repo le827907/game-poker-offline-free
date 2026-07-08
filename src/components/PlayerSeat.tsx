@@ -114,8 +114,8 @@ export const PlayerSeat: React.FC<Props> = ({ player, isCurrentActor, isDealer, 
                isTop ? "-bottom-14 sm:-bottom-16" : "-top-14 sm:-top-16"
              )}
           >
-            <PlayingCard card={player.cards[0]} hidden={player.isBot} className="-rotate-6 hover:rotate-0 transition-transform origin-bottom-right" delay={0.1} />
-            <PlayingCard card={player.cards[1]} hidden={player.isBot} className="rotate-6 hover:rotate-0 transition-transform origin-bottom-left" delay={0.2} />
+            <PlayingCard key={player.cards[0].id || `${player.cards[0].rank}-${player.cards[0].suit}`} card={player.cards[0]} hidden={player.isBot} className="-rotate-6 hover:rotate-0 transition-transform origin-bottom-right" delay={0.1} />
+            <PlayingCard key={player.cards[1].id || `${player.cards[1].rank}-${player.cards[1].suit}`} card={player.cards[1]} hidden={player.isBot} className="rotate-6 hover:rotate-0 transition-transform origin-bottom-left" delay={0.2} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -131,8 +131,8 @@ export const PlayerSeat: React.FC<Props> = ({ player, isCurrentActor, isDealer, 
                isTop ? "-bottom-12 sm:-bottom-14" : "-top-12 sm:-top-14"
              )}
           >
-             <PlayingCard card={player.cards[0]} hidden={player.isBot} className="-rotate-12" />
-             <PlayingCard card={player.cards[1]} hidden={player.isBot} className="rotate-0" />
+             <PlayingCard key={player.cards[0].id || `${player.cards[0].rank}-${player.cards[0].suit}`} card={player.cards[0]} hidden={player.isBot} className="-rotate-12" />
+             <PlayingCard key={player.cards[1].id || `${player.cards[1].rank}-${player.cards[1].suit}`} card={player.cards[1]} hidden={player.isBot} className="rotate-0" />
           </motion.div>
         )}
       </AnimatePresence>

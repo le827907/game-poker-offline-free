@@ -8,17 +8,20 @@ function toSolverFormat(card: Card): string {
 }
 
 function fromSolverFormat(str: string): Card {
-  const rank = str.charAt(0).toUpperCase() as any;
+  let rank = str.charAt(0).toUpperCase() as any;
+  if (rank === '1') rank = 'A'; // Wheel straight Ace
+  
   const suitLetter = str.charAt(1).toLowerCase();
   const suitMap: any = { 'h': 'hearts', 'd': 'diamonds', 'c': 'clubs', 's': 'spades' };
-  return { rank, suit: suitMap[suitLetter] };
+  const suit = suitMap[suitLetter];
+  return { id: `${rank}-${suit}`, rank, suit };
 }
 
 export function translateHandDescr(descr: string, name: string): string {
   let translatedDescr = descr;
   translatedDescr = translatedDescr.replace('High Card', 'Mậu thầu');
-  translatedDescr = translatedDescr.replace('Pair', 'Một đôi');
   translatedDescr = translatedDescr.replace('Two Pair', 'Hai đôi');
+  translatedDescr = translatedDescr.replace('Pair', 'Một đôi');
   translatedDescr = translatedDescr.replace('Three of a Kind', 'Bộ ba');
   translatedDescr = translatedDescr.replace('Straight Flush', 'Thùng phá sảnh');
   translatedDescr = translatedDescr.replace('Royal Flush', 'Sảnh chúa');
@@ -57,10 +60,15 @@ export function translateHandDescr(descr: string, name: string): string {
 
   translatedDescr = translatedDescr.replace(/High/g, 'cao nhất');
   translatedDescr = translatedDescr.replace(/and/g, 'và');
+  translatedDescr = translatedDescr.replace(/&/g, 'và');
+  translatedDescr = translatedDescr.replace(/ over /g, ' và ');
   translatedDescr = translatedDescr.replace(/Hearts/g, 'Cơ');
   translatedDescr = translatedDescr.replace(/Diamonds/g, 'Rô');
   translatedDescr = translatedDescr.replace(/Clubs/g, 'Chuồn');
   translatedDescr = translatedDescr.replace(/Spades/g, 'Bích');
+  
+  // Clean up things like "5c cao nhất" to "5 cao nhất"
+  translatedDescr = translatedDescr.replace(/([2-9TJQKA])[shdc] cao nhất/g, '$1 cao nhất');
   
   return translatedDescr;
 }

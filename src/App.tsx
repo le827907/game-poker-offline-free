@@ -594,10 +594,23 @@ export default function App() {
                         <div className="text-yellow-400 text-sm mt-2 font-black uppercase tracking-wider bg-yellow-500/10 inline-block px-3 py-1 rounded-full border border-yellow-500/30">
                           {w.description}
                         </div>
+                        {w.winningCards && w.winningCards.length === 5 && (
+                          <div className="mt-3">
+                            <div className="text-xs text-slate-400 mb-1">Bài mạnh nhất:</div>
+                            <div className="flex gap-1">
+                               {w.winningCards.map((wc, idx) => (
+                                 <PlayingCard key={`win-${wc.id || wc.rank + wc.suit}`} card={wc} delay={0.1 * idx} className="w-8 h-11 sm:w-10 sm:h-14 shadow-[0_0_8px_rgba(250,204,21,0.5)] border-yellow-500/50" />
+                               ))}
+                            </div>
+                          </div>
+                        )}
                         {w.handCards && w.handCards.length === 2 && (
-                          <div className="flex gap-2 mt-3">
-                             <PlayingCard card={w.handCards[0]} delay={0.2} highlight={w.winningCards?.some(wc => wc.rank === w.handCards[0].rank && wc.suit === w.handCards[0].suit)} />
-                             <PlayingCard card={w.handCards[1]} delay={0.4} highlight={w.winningCards?.some(wc => wc.rank === w.handCards[1].rank && wc.suit === w.handCards[1].suit)} />
+                          <div className="mt-3">
+                            <div className="text-xs text-slate-400 mb-1">Bài tẩy:</div>
+                            <div className="flex gap-2">
+                               <PlayingCard key={w.handCards[0].id || `${w.handCards[0].rank}-${w.handCards[0].suit}`} card={w.handCards[0]} delay={0.2} highlight={w.winningCards?.some(wc => wc.rank === w.handCards[0].rank && wc.suit === w.handCards[0].suit)} />
+                               <PlayingCard key={w.handCards[1].id || `${w.handCards[1].rank}-${w.handCards[1].suit}`} card={w.handCards[1]} delay={0.4} highlight={w.winningCards?.some(wc => wc.rank === w.handCards[1].rank && wc.suit === w.handCards[1].suit)} />
+                            </div>
                           </div>
                         )}
                       </div>

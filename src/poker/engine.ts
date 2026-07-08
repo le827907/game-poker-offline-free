@@ -1,5 +1,5 @@
 import { GameState, Player, ActionType, Street, Card, Pot } from './types';
-import { createDeck, shuffleDeck, formatCard } from './deck';
+import { createDeck, shuffleDeck, formatCard, validateCardState } from './deck';
 import { evaluateWinners } from './evaluator';
 
 export const STARTING_CHIPS = 1000;
@@ -81,6 +81,8 @@ export function startHand(state: GameState): GameState {
     const cards: [Card, Card] = [deck.pop()!, deck.pop()!];
     return { ...p, isActive: true, chips: currentChips, cards, currentBet: 0, totalInvestment: 0, hasFolded: false, isAllIn: false, hasActed: false };
   });
+
+  validateCardState(deck, players, []);
 
   let nextDealerIdx = (state.dealerIndex + 1) % players.length;
   while (!players[nextDealerIdx].isActive || players[nextDealerIdx].hasFolded) {
@@ -304,6 +306,7 @@ function advanceStreet(state: GameState): GameState {
       }
       board = newBoard;
       street = 'river';
+      validateCardState(deck, players, board);
       return executeShowdown({ ...state, players, board, deck, street });
   }
 
@@ -329,6 +332,8 @@ function advanceStreet(state: GameState): GameState {
     lastActor--;
     if (lastActor < 0) lastActor = players.length - 1;
   }
+
+  validateCardState(deck, players, board);
 
   return {
     ...state,
