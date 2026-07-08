@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #475569;
+    border-radius: 20px;
+  }
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #475569 transparent;
+  }
+  
+  .table-surface {
+    background: radial-gradient(circle at 50% 50%, #065f46 0%, #064e3b 100%);
+    background-size: 200% 200%;
+    animation: table-breathe 8s ease-in-out infinite;
+  }
+}
+
+@keyframes table-breathe {
+  0% {
+    background-position: 50% 50%;
+    background-size: 150% 150%;
+  }
+  50% {
+    background-position: 50% 50%;
+    background-size: 200% 200%;
+  }
+  100% {
+    background-position: 50% 50%;
+    background-size: 150% 150%;
+  }
+}
+
+html, body {
+  scroll-behavior: smooth;
+  height: 100%;
+}
+
+body {
+  overflow-x: hidden;
+  overflow-y: auto;
+}

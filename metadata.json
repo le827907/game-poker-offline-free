@@ -1,0 +1,6 @@
+{
+  "name": "Offline Poker",
+  "description": "A single-player offline Texas Hold'em poker game.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
