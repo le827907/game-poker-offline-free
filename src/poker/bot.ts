@@ -113,16 +113,19 @@ export function decideBotAction(state: GameState): Action {
   function tightLogic(): Action {
       // Plays fewer hands, folds weak hands, raises strong
       if (effStrength >= 8) {
-          if (canRaise && rand < 0.8) return safeRaise(Math.max(state.minRaise, state.pot * 0.75));
+          if (canRaise && rand < 0.7) return safeRaise(Math.max(state.minRaise, state.pot * 0.75));
           if (callAmount > 0) return { type: 'call' };
-          return canRaise && rand < 0.5 ? safeRaise(state.minRaise) : { type: 'check' };
+          return canRaise && rand < 0.4 ? safeRaise(state.minRaise) : { type: 'check' };
       }
       if (effStrength >= 5) {
-          if (potOdds < 0.3) return { type: 'call' };
+          if (potOdds < 0.4) return { type: 'call' };
           if (callAmount === 0) return { type: 'check' };
+          if (rand < 0.2 && callAmount < state.bigBlind * 3) return { type: 'call' }; // Small curiosity
           return { type: 'fold' };
       }
-      return canCheck ? { type: 'check' } : { type: 'fold' };
+      if (canCheck) return { type: 'check' };
+      if (rand < 0.1 && callAmount <= state.bigBlind * 2) return { type: 'call' }; // Occasional loose call
+      return { type: 'fold' };
   }
 
   function aggressiveLogic(): Action {
@@ -132,13 +135,16 @@ export function decideBotAction(state: GameState): Action {
           return callAmount > 0 ? { type: 'call' } : { type: 'check' };
       }
       if (effStrength >= 4 || hasDraw) {
-          if (canRaise && rand < 0.4) return safeRaise(state.minRaise); // Semi-bluff
-          if (potOdds < 0.4) return { type: 'call' };
-          return canCheck ? { type: 'check' } : { type: 'fold' };
+          if (canRaise && rand < 0.5) return safeRaise(state.minRaise); // Semi-bluff
+          if (potOdds < 0.5) return { type: 'call' };
+          if (callAmount === 0) return { type: 'check' };
+          return rand < 0.3 ? { type: 'call' } : { type: 'fold' };
       }
       // Pure bluff
-      if (canRaise && rand < 0.2 && activePlayers <= 2) return safeRaise(state.pot * 0.5);
-      return canCheck ? { type: 'check' } : { type: 'fold' };
+      if (canRaise && rand < 0.3 && activePlayers <= 3) return safeRaise(state.pot * 0.5);
+      if (canCheck) return { type: 'check' };
+      if (rand < 0.2 && callAmount < state.pot * 0.3) return { type: 'call' };
+      return { type: 'fold' };
   }
 
   function callingStationLogic(): Action {
@@ -154,7 +160,8 @@ export function decideBotAction(state: GameState): Action {
       }
       if (canCheck) return { type: 'check' };
       // Call even weak hands sometimes
-      if (potOdds < 0.4 && rand < 0.5) return { type: 'call' };
+      if (potOdds < 0.5 && rand < 0.6) return { type: 'call' };
+      if (rand < 0.3) return { type: 'call' };
       return { type: 'fold' };
   }
 
@@ -162,7 +169,7 @@ export function decideBotAction(state: GameState): Action {
       // Slow-plays strong hands, bluffs weak hands
       if (effStrength >= 8) {
           // Slow play
-          if (rand < 0.6) {
+          if (rand < 0.7) {
               if (callAmount > 0) return { type: 'call' };
               return { type: 'check' };
           }
@@ -171,12 +178,16 @@ export function decideBotAction(state: GameState): Action {
       }
       if (effStrength <= 3) {
           // Bluff
-          if (canRaise && rand < 0.3 && activePlayers <= 3) return safeRaise(state.pot * 0.75);
-          return canCheck ? { type: 'check' } : { type: 'fold' };
+          if (canRaise && rand < 0.4 && activePlayers <= 3) return safeRaise(state.pot * 0.75);
+          if (canCheck) return { type: 'check' };
+          if (rand < 0.2) return { type: 'call' }; // float
+          return { type: 'fold' };
       }
       // Mid hands played normally
-      if (potOdds < 0.35) return { type: 'call' };
-      return canCheck ? { type: 'check' } : { type: 'fold' };
+      if (potOdds < 0.45) return { type: 'call' };
+      if (canCheck) return { type: 'check' };
+      if (rand < 0.3) return { type: 'call' };
+      return { type: 'fold' };
   }
 
   function balancedLogic(): Action {
@@ -187,17 +198,22 @@ export function decideBotAction(state: GameState): Action {
           return canRaise && rand < 0.3 ? safeRaise(state.minRaise) : { type: 'check' };
       }
       if (effStrength >= 4 || hasDraw) {
-          if (callAmount <= state.pot * 0.5 || potOdds < 0.3) {
-              if (canRaise && rand < 0.2) return safeRaise(state.minRaise);
+          if (callAmount <= state.pot || potOdds < 0.4) {
+              if (canRaise && rand < 0.3) return safeRaise(state.minRaise);
               return { type: 'call' };
           }
-          if (hasDraw && potOdds < 0.4) return { type: 'call' };
-          return canCheck ? { type: 'check' } : { type: 'fold' };
+          if (hasDraw && potOdds < 0.5) return { type: 'call' };
+          if (canCheck) return { type: 'check' };
+          if (rand < 0.3 && callAmount <= state.pot * 0.5) return { type: 'call' }; // Curiosity call
+          return { type: 'fold' };
       }
       if (canCheck) {
-          if (activePlayers <= 2 && rand < 0.1) return safeRaise(state.minRaise); // Occasional stab
+          if (activePlayers <= 2 && rand < 0.2) return safeRaise(state.minRaise); // Occasional stab
           return { type: 'check' };
       }
+      // Entertainment/pot committed calls
+      if (actor.totalInvestment > state.pot * 0.2 && callAmount < state.pot * 0.5 && rand < 0.4) return { type: 'call' };
+      if (rand < 0.15 && callAmount <= state.bigBlind * 4) return { type: 'call' };
       return { type: 'fold' };
   }
 

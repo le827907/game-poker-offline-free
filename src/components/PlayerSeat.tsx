@@ -51,8 +51,8 @@ export const PlayerSeat: React.FC<Props> = ({ player, isCurrentActor, isDealer, 
               actionBadge.includes("Bỏ bài") ? "bg-slate-700 text-slate-300" :
               actionBadge.includes("Xem") ? "bg-emerald-600" :
               actionBadge.includes("Theo") ? "bg-blue-600" :
-              actionBadge.includes("Tố") ? "bg-purple-600" :
-              "bg-red-600" // Tất tay
+              actionBadge.includes("Tố") ? "bg-purple-600 shadow-[0_0_15px_rgba(147,51,234,0.6)] text-base" :
+              "bg-red-600 shadow-[0_0_20px_rgba(220,38,38,0.8)] text-base uppercase animate-pulse" // Tất tay
             )}
           >
             {actionBadge}
@@ -68,9 +68,9 @@ export const PlayerSeat: React.FC<Props> = ({ player, isCurrentActor, isDealer, 
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             className={cn(
-              "absolute z-40 px-2 py-0.5 rounded shadow-md text-[10px] font-bold whitespace-nowrap",
-              isTop ? "-top-6" : "-top-6",
-              isThinking || player.isBot ? "bg-yellow-400 text-yellow-900" : "bg-emerald-400 text-emerald-900 animate-pulse"
+              "absolute z-40 px-3 py-1 rounded shadow-md text-xs font-bold whitespace-nowrap",
+              isTop ? "-top-8" : "-top-8",
+              isThinking || player.isBot ? "bg-yellow-500 text-yellow-950 shadow-[0_0_15px_rgba(234,179,8,0.6)] animate-pulse" : "bg-emerald-500 text-emerald-950 animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.6)]"
             )}
           >
             {player.isBot ? "Đang suy nghĩ..." : "Lượt của bạn"}
@@ -87,7 +87,7 @@ export const PlayerSeat: React.FC<Props> = ({ player, isCurrentActor, isDealer, 
             exit={{ opacity: 0, y: isTop ? 10 : -10, scale: 0.8 }}
             className={cn(
               "absolute bg-slate-800 text-white text-xs px-3 py-1 rounded-full shadow-lg border border-slate-600 font-bold tracking-wider z-20 flex items-center gap-1",
-              isTop ? "-bottom-8" : "-top-8"
+              isTop ? "-bottom-10" : "-top-10"
             )}
           >
             <div className="w-2 h-2 rounded-full bg-yellow-400 mr-1" />
@@ -144,19 +144,34 @@ export const PlayerSeat: React.FC<Props> = ({ player, isCurrentActor, isDealer, 
             ? { 
                 scale: [1, 1.1, 1.05],
                 boxShadow: ["0px 0px 20px rgba(250,204,21,0.5)", "0px 0px 60px rgba(250,204,21,1)", "0px 0px 40px rgba(250,204,21,0.8)"],
-                borderColor: ["#facc15", "#fef08a", "#facc15"]
+                borderColor: ["#facc15", "#fef08a", "#facc15"] 
               }
-            : isCurrentActor ? { scale: 1.05 } : { scale: 1 }
+            : isCurrentActor && !player.isBot
+            ? {
+                scale: 1.05,
+                boxShadow: ["0px 0px 20px rgba(52,211,153,0.5)", "0px 0px 40px rgba(52,211,153,0.8)", "0px 0px 20px rgba(52,211,153,0.5)"],
+                borderColor: ["#34d399", "#6ee7b7", "#34d399"]
+              }
+            : isCurrentActor && player.isBot
+            ? {
+                scale: 1.05,
+                boxShadow: ["0px 0px 20px rgba(234,179,8,0.5)", "0px 0px 40px rgba(234,179,8,0.8)", "0px 0px 20px rgba(234,179,8,0.5)"],
+                borderColor: ["#eab308", "#fde047", "#eab308"]
+              }
+            : { scale: 1, boxShadow: "0px 0px 0px rgba(0,0,0,0)" }
         }
         transition={
           isWinner 
             ? { duration: 1.5, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" } 
+            : isCurrentActor
+            ? { duration: 1.5, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }
             : { duration: 0.3 }
         }
         className={cn(
           "relative w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 flex flex-col items-center justify-center text-white shadow-xl transition-colors duration-300 z-30",
           isWinner ? "bg-yellow-600 border-yellow-400" :
-          isCurrentActor ? "border-emerald-400 bg-slate-700 shadow-[0_0_30px_rgba(52,211,153,0.5)]" : "border-slate-600 bg-slate-800",
+          isCurrentActor && !player.isBot ? "bg-slate-700" :
+          isCurrentActor && player.isBot ? "bg-slate-700" : "border-slate-600 bg-slate-800",
           player.hasFolded ? "opacity-40 grayscale" : "opacity-100",
           player.isActive ? "" : "hidden"
         )}

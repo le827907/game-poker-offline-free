@@ -4,7 +4,7 @@ import { initGame, startHand, processAction, STARTING_CHIPS } from './poker/engi
 import { decideBotAction } from './poker/bot';
 import { PlayerSeat } from './components/PlayerSeat';
 import { ActionBar } from './components/ActionBar';
-import { PlayingCard } from './components/Card';
+import { PlayingCard, cn } from './components/Card';
 import { VictoryConfetti } from './components/VictoryConfetti';
 import { HandRankings } from './components/HandRankTooltip';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
@@ -75,6 +75,7 @@ export default function App() {
 
   // UI State
   const [actionBadges, setActionBadges] = useState<{ [playerId: string]: { id: number, text: string } }>({});
+  const [chipAnimations, setChipAnimations] = useState<{ id: string, playerIndex: number, type: 'to-pot' | 'to-player' | 'burst', particles?: { id: string, dx: number, dy: number, delay: number }[] }[]>([]);
   const [isBotThinking, setIsBotThinking] = useState(false);
   const isBotActing = useRef(false);
 
@@ -85,6 +86,17 @@ export default function App() {
     else if (actionType === 'call') { text = `Theo ${amount ? '$'+amount : ''}`; soundManager.playCall(); }
     else if (actionType === 'raise') { text = `Tố $${amount}`; soundManager.playRaise(); }
     else if (actionType === 'all-in') { text = `Tất tay $${amount}`; soundManager.playAllIn(); }
+
+    if (['call', 'raise', 'all-in'].includes(actionType)) {
+      const pIndex = state?.players.findIndex(p => p.id === playerId) ?? -1;
+      if (pIndex !== -1) {
+        const animId = Date.now().toString() + Math.random();
+        setChipAnimations(prev => [...prev, { id: animId, playerIndex: pIndex, type: 'to-pot' }]);
+        setTimeout(() => {
+          setChipAnimations(prev => prev.filter(a => a.id !== animId));
+        }, 800);
+      }
+    }
 
     const badgeId = Date.now();
     setActionBadges(prev => ({
@@ -144,6 +156,21 @@ export default function App() {
       } else {
         soundManager.playShowdown();
       }
+      
+      // Add win chip animations
+      state.winners.forEach((winner, i) => {
+         const particles = Array.from({ length: 15 }).map((_, j) => ({
+             id: Date.now().toString() + "-win-" + i + "-" + j,
+             dx: (Math.random() - 0.5) * 200,
+             dy: (Math.random() - 0.5) * 200,
+             delay: Math.random() * 0.2
+         }));
+         const animId = Date.now().toString() + "-burst-" + i;
+         setChipAnimations(prev => [...prev, { id: animId, playerIndex: winner.playerIndex, type: 'burst', particles }]);
+         setTimeout(() => {
+           setChipAnimations(prev => prev.filter(a => a.id !== animId));
+         }, 1500);
+      });
     }
   }, [state?.handInProgress, state?.winners]);
 
@@ -410,7 +437,7 @@ export default function App() {
               <div className="flex gap-2 h-24 items-center">
                 <AnimatePresence>
                   {state.board.map((card, i) => (
-                    <PlayingCard key={`${card.rank}-${card.suit}`} card={card} delay={i < 3 ? 0.2 * i : 0.4} />
+                    <PlayingCard key={`${card.rank}-${card.suit}`} card={card} delay={i * 0.2 + 0.1} />
                   ))}
                 </AnimatePresence>
                 {/* Placeholders for un-dealt board cards */}
@@ -445,6 +472,80 @@ export default function App() {
                 />
               );
             })}
+
+            {/* Chip Animations Overlay */}
+            <div className="absolute inset-0 pointer-events-none z-50">
+              <AnimatePresence>
+                {chipAnimations.map(anim => {
+                   const posClass = seatPositions[anim.playerIndex];
+                   if (anim.type === 'to-pot') {
+                     return (
+                       <div key={anim.id} className="absolute inset-0">
+                         <motion.div
+                           className={cn("absolute w-6 h-6 rounded-full bg-yellow-500 border-2 border-yellow-300 shadow-lg flex items-center justify-center -translate-x-1/2 -translate-y-1/2", posClass)}
+                           initial={{ opacity: 1, scale: 1 }}
+                           animate={{ top: '50%', left: '50%', opacity: 0, scale: 0.5 }}
+                           transition={{ duration: 0.5, ease: "easeOut" }}
+                           exit={{ opacity: 0 }}
+                         >
+                            <div className="w-3 h-3 rounded-full border border-yellow-300 border-dashed" />
+                         </motion.div>
+                       </div>
+                     );
+                   } else if (anim.type === 'burst') {
+                     let targetTop = '85%';
+                     let targetLeft = '100%';
+                     if (posClass.includes('top-[100%]')) { targetTop = '100%'; targetLeft = '50%'; }
+                     else if (posClass.includes('top-[85%] left')) { targetTop = '85%'; targetLeft = '0%'; }
+                     else if (posClass.includes('top-[15%] left')) { targetTop = '15%'; targetLeft = '0%'; }
+                     else if (posClass.includes('top-[0%]')) { targetTop = '0%'; targetLeft = '50%'; }
+                     else if (posClass.includes('top-[15%] right')) { targetTop = '15%'; targetLeft = '100%'; }
+
+                     return (
+                       <div key={anim.id} className="absolute inset-0">
+                         {anim.particles?.map(p => (
+                           <motion.div
+                             key={p.id}
+                             className={cn("absolute w-4 h-4 rounded-full bg-yellow-400 border-2 border-yellow-200 shadow-[0_0_10px_rgba(250,204,21,0.8)] flex items-center justify-center -translate-x-1/2 -translate-y-1/2")}
+                             initial={{ top: '50%', left: '50%', opacity: 0, scale: 0 }}
+                             animate={{
+                               top: ['50%', '50%', targetTop],
+                               left: ['50%', '50%', targetLeft],
+                               x: ['-50%', `calc(-50% + ${p.dx}px)`, '-50%'],
+                               y: ['-50%', `calc(-50% + ${p.dy}px)`, '-50%'],
+                               opacity: [0, 1, 1, 0],
+                               scale: [0.5, 1, 1, 0]
+                             }}
+                             transition={{ duration: 1, times: [0, 0.3, 0.8, 1], delay: p.delay, ease: "easeInOut" }}
+                           />
+                         ))}
+                       </div>
+                     );
+                   } else {
+                     return (
+                       <div key={anim.id} className="absolute inset-0">
+                         <motion.div
+                           className={cn("absolute w-6 h-6 rounded-full bg-yellow-400 border-2 border-yellow-200 shadow-lg flex items-center justify-center -translate-x-1/2 -translate-y-1/2")}
+                           initial={{ top: '50%', left: '50%', opacity: 0, scale: 0.5 }}
+                           animate={
+                             posClass.includes('top-[100%]') ? { top: '100%', left: '50%', opacity: 1, scale: 1 } :
+                             posClass.includes('top-[85%] left') ? { top: '85%', left: '0%', opacity: 1, scale: 1 } :
+                             posClass.includes('top-[15%] left') ? { top: '15%', left: '0%', opacity: 1, scale: 1 } :
+                             posClass.includes('top-[0%]') ? { top: '0%', left: '50%', opacity: 1, scale: 1 } :
+                             posClass.includes('top-[15%] right') ? { top: '15%', left: '100%', opacity: 1, scale: 1 } :
+                             { top: '85%', left: '100%', opacity: 1, scale: 1 }
+                           }
+                           transition={{ duration: 0.5, ease: "easeOut" }}
+                           exit={{ opacity: 0 }}
+                         >
+                            <div className="w-3 h-3 rounded-full border border-yellow-200 border-dashed" />
+                         </motion.div>
+                       </div>
+                     );
+                   }
+                })}
+              </AnimatePresence>
+            </div>
           </div>
 
           {/* Showdown Overlay / Winners */}
@@ -466,14 +567,17 @@ export default function App() {
                   <h2 className="text-3xl font-black text-yellow-400 mb-4 tracking-wider uppercase">Kết quả</h2>
                   <div className="space-y-4 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
                     {state.winners.map((w, i) => (
-                      <div key={i} className="bg-slate-800 p-4 rounded-xl text-left border border-slate-700">
+                      <div key={i} className="bg-slate-800 p-4 rounded-xl text-left border-2 border-yellow-500/50 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-500/10 rounded-bl-full" />
                         <div className="text-white font-bold text-lg">{state.players[w.playerIndex].name}</div>
-                        <div className="text-slate-300 text-sm mt-1">{w.description}</div>
-                        <div className="text-emerald-400 font-bold mt-2 text-xl">+${w.amount}</div>
+                        <div className="text-emerald-400 font-bold mt-1 text-2xl">+${w.amount}</div>
+                        <div className="text-yellow-400 text-sm mt-2 font-black uppercase tracking-wider bg-yellow-500/10 inline-block px-3 py-1 rounded-full border border-yellow-500/30">
+                          {w.description}
+                        </div>
                         {w.handCards && w.handCards.length === 2 && (
                           <div className="flex gap-2 mt-3">
-                             <PlayingCard card={w.handCards[0]} />
-                             <PlayingCard card={w.handCards[1]} />
+                             <PlayingCard card={w.handCards[0]} delay={0.2} />
+                             <PlayingCard card={w.handCards[1]} delay={0.4} />
                           </div>
                         )}
                       </div>
