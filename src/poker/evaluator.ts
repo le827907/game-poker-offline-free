@@ -18,59 +18,19 @@ function fromSolverFormat(str: string): Card {
 }
 
 export function translateHandDescr(descr: string, name: string): string {
-  let translatedDescr = descr;
-  translatedDescr = translatedDescr.replace('High Card', 'Mậu thầu');
-  translatedDescr = translatedDescr.replace('Two Pair', 'Hai đôi');
-  translatedDescr = translatedDescr.replace('Pair', 'Một đôi');
-  translatedDescr = translatedDescr.replace('Three of a Kind', 'Bộ ba');
-  translatedDescr = translatedDescr.replace('Straight Flush', 'Thùng phá sảnh');
-  translatedDescr = translatedDescr.replace('Royal Flush', 'Sảnh chúa');
-  translatedDescr = translatedDescr.replace('Straight', 'Sảnh');
-  translatedDescr = translatedDescr.replace('Flush', 'Thùng');
-  translatedDescr = translatedDescr.replace('Full House', 'Cù lũ');
-  translatedDescr = translatedDescr.replace('Four of a Kind', 'Tứ quý');
-
-  translatedDescr = translatedDescr.replace(/A's/g, 'A');
-  translatedDescr = translatedDescr.replace(/K's/g, 'K');
-  translatedDescr = translatedDescr.replace(/Q's/g, 'Q');
-  translatedDescr = translatedDescr.replace(/J's/g, 'J');
-  translatedDescr = translatedDescr.replace(/10's/g, '10');
-  translatedDescr = translatedDescr.replace(/9's/g, '9');
-  translatedDescr = translatedDescr.replace(/8's/g, '8');
-  translatedDescr = translatedDescr.replace(/7's/g, '7');
-  translatedDescr = translatedDescr.replace(/6's/g, '6');
-  translatedDescr = translatedDescr.replace(/5's/g, '5');
-  translatedDescr = translatedDescr.replace(/4's/g, '4');
-  translatedDescr = translatedDescr.replace(/3's/g, '3');
-  translatedDescr = translatedDescr.replace(/2's/g, '2');
-
-  translatedDescr = translatedDescr.replace(/Aces/g, 'A');
-  translatedDescr = translatedDescr.replace(/Kings/g, 'K');
-  translatedDescr = translatedDescr.replace(/Queens/g, 'Q');
-  translatedDescr = translatedDescr.replace(/Jacks/g, 'J');
-  translatedDescr = translatedDescr.replace(/Tens/g, '10');
-  translatedDescr = translatedDescr.replace(/Nines/g, '9');
-  translatedDescr = translatedDescr.replace(/Eights/g, '8');
-  translatedDescr = translatedDescr.replace(/Sevens/g, '7');
-  translatedDescr = translatedDescr.replace(/Sixes/g, '6');
-  translatedDescr = translatedDescr.replace(/Fives/g, '5');
-  translatedDescr = translatedDescr.replace(/Fours/g, '4');
-  translatedDescr = translatedDescr.replace(/Threes/g, '3');
-  translatedDescr = translatedDescr.replace(/Twos/g, '2');
-
-  translatedDescr = translatedDescr.replace(/High/g, 'cao nhất');
-  translatedDescr = translatedDescr.replace(/and/g, 'và');
-  translatedDescr = translatedDescr.replace(/&/g, 'và');
-  translatedDescr = translatedDescr.replace(/ over /g, ' và ');
-  translatedDescr = translatedDescr.replace(/Hearts/g, 'Cơ');
-  translatedDescr = translatedDescr.replace(/Diamonds/g, 'Rô');
-  translatedDescr = translatedDescr.replace(/Clubs/g, 'Chuồn');
-  translatedDescr = translatedDescr.replace(/Spades/g, 'Bích');
-  
-  // Clean up things like "5c cao nhất" to "5 cao nhất"
-  translatedDescr = translatedDescr.replace(/([2-9TJQKA])[shdc] cao nhất/g, '$1 cao nhất');
-  
-  return translatedDescr;
+  switch (name) {
+    case 'High Card': return 'Mậu thầu';
+    case 'Pair': return 'Một đôi';
+    case 'Two Pair': return 'Hai đôi';
+    case 'Three of a Kind': return 'Bộ ba';
+    case 'Straight': return 'Sảnh';
+    case 'Flush': return 'Thùng';
+    case 'Full House': return 'Cù lũ';
+    case 'Four of a Kind': return 'Tứ quý';
+    case 'Straight Flush': return 'Thùng phá sảnh';
+    case 'Royal Flush': return 'Sảnh chúa';
+    default: return name;
+  }
 }
 
 export function evaluateHand(holeCards: Card[], boardCards: Card[]) {

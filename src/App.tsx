@@ -90,8 +90,8 @@ export default function App() {
     if (actionType === 'fold') { text = "Bỏ bài"; soundManager.playFold(); }
     else if (actionType === 'check') { text = "Xem"; soundManager.playCheck(); }
     else if (actionType === 'call') { text = `Theo ${amount ? '$'+amount : ''}`; soundManager.playCall(); }
-    else if (actionType === 'raise') { text = `Tố $${amount}`; soundManager.playRaise(); }
-    else if (actionType === 'all-in') { text = `Tất tay $${amount}`; soundManager.playAllIn(); }
+    else if (actionType === 'raise') { text = `Tố${amount ? ' $'+amount : ''}`; soundManager.playRaise(); }
+    else if (actionType === 'all-in') { text = `Tất tay${amount ? ' $'+amount : ''}`; soundManager.playAllIn(); }
 
     if (['call', 'raise', 'all-in'].includes(actionType)) {
       const pIndex = state?.players.findIndex(p => p.id === playerId) ?? -1;
