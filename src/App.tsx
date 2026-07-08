@@ -448,7 +448,7 @@ export default function App() {
       </header>
 
       {/* Main Table Area */}
-      <main className="flex-1 relative p-4 sm:p-8 flex flex-col md:flex-row gap-4 sm:gap-8 overflow-y-auto overflow-x-hidden custom-scrollbar">
+      <main className="flex-1 relative p-4 sm:p-8 flex flex-col lg:flex-row gap-4 sm:gap-8 overflow-y-auto overflow-x-hidden custom-scrollbar">
         
         {/* Table Canvas */}
         <div className="flex-1 relative flex items-center justify-center min-h-[500px] sm:min-h-[600px] py-24 px-6 sm:px-20">
@@ -609,7 +609,7 @@ export default function App() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none"
+                  className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none bg-black/40 backdrop-blur-[2px]"
                 >
                 <motion.div 
                   initial={{ scale: 0.9, y: 20 }}
@@ -692,7 +692,7 @@ export default function App() {
         </div>
 
         {/* Sidebar (Stats & History) */}
-        <div className="w-full md:w-80 flex flex-col gap-4 shrink-0 h-[500px] md:h-full md:max-h-[600px]">
+        <div className="w-full lg:w-80 flex flex-col gap-4 shrink-0 h-[500px] lg:h-full lg:max-h-[600px]">
           
           {/* Statistics Panel */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl shrink-0">
