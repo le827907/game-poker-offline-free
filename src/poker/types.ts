@@ -59,7 +59,7 @@ export interface GameState {
   handHistory: string[];
   minRaise: number;
   handInProgress: boolean;
-  winners: { playerIndex: number; amount: number; description: string; handCards: Card[] }[];
+  winners: { playerIndex: number; amount: number; description: string; handCards: Card[]; winningCards?: Card[] }[];
   smallBlind: number;
   bigBlind: number;
   lastActorIndex: number; // Who closes the action

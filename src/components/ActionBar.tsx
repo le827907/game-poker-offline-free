@@ -26,17 +26,7 @@ export const ActionBar: React.FC<Props> = ({ state, onAction, onNextHand }) => {
   }, [minRaiseAmount, isPlayerTurn]);
 
   if (!state.handInProgress) {
-    if (actor.chips <= 0) return null;
-    return (
-      <div className="w-full bg-slate-900 border-t border-slate-800 p-4 flex justify-center items-center gap-4 z-40">
-        <button 
-          onClick={onNextHand}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 px-10 rounded-xl shadow-[0_0_15px_rgba(5,150,105,0.4)] text-lg transition-transform hover:scale-105 active:scale-95"
-        >
-          Ván Tiếp Theo
-        </button>
-      </div>
-    );
+    return null;
   }
 
   if (!isPlayerTurn) {

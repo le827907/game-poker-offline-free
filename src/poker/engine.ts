@@ -73,14 +73,13 @@ export function startHand(state: GameState): GameState {
   let deck = shuffleDeck(createDeck());
   const players = state.players.map(p => {
     let currentChips = p.chips;
-    // Auto rebuy for bots
-    if (p.isBot && currentChips === 0) {
-      currentChips = STARTING_CHIPS;
-    }
     
-    if (!p.isActive || currentChips === 0) return { ...p, chips: currentChips, cards: [] as unknown as [Card, Card], hasFolded: true, isAllIn: false, hasActed: false };
+    // Disable automatic chip refill for bots and players
+    const isActive = p.isActive && currentChips > 0;
+    
+    if (!isActive) return { ...p, isActive: false, chips: currentChips, cards: [] as unknown as [Card, Card], hasFolded: true, isAllIn: false, hasActed: false };
     const cards: [Card, Card] = [deck.pop()!, deck.pop()!];
-    return { ...p, chips: currentChips, cards, currentBet: 0, totalInvestment: 0, hasFolded: false, isAllIn: false, hasActed: false };
+    return { ...p, isActive: true, chips: currentChips, cards, currentBet: 0, totalInvestment: 0, hasFolded: false, isAllIn: false, hasActed: false };
   });
 
   let nextDealerIdx = (state.dealerIndex + 1) % players.length;
@@ -395,7 +394,7 @@ function executeShowdown(state: GameState): GameState {
         const player = players[playerIdx];
         const oddChipText = gotOddChip ? " (nhận chip lẻ)" : "";
         handHistory.push(`${player.name} thắng ${amountWon} chip với ${w.description}${oddChipText}.`);
-        winnersLog.push({ playerIndex: playerIdx, amount: amountWon, description: w.description, handCards: player.cards });
+        winnersLog.push({ playerIndex: playerIdx, amount: amountWon, description: w.description, handCards: player.cards, winningCards: w.winningCards });
       });
     }
   });

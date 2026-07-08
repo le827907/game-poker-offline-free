@@ -47,7 +47,7 @@ export const PlayerSeat: React.FC<Props> = ({ player, isCurrentActor, isDealer, 
             exit={{ opacity: 0, scale: 0.8 }}
             className={cn(
               "absolute z-50 px-3 py-1 rounded-lg shadow-xl font-bold text-sm text-white whitespace-nowrap border border-white/20",
-              isTop ? "top-full mt-4" : "bottom-full mb-4",
+              isTop ? "-bottom-32" : "-top-32",
               actionBadge.includes("Bỏ bài") ? "bg-slate-700 text-slate-300" :
               actionBadge.includes("Xem") ? "bg-emerald-600" :
               actionBadge.includes("Theo") ? "bg-blue-600" :
@@ -87,7 +87,7 @@ export const PlayerSeat: React.FC<Props> = ({ player, isCurrentActor, isDealer, 
             exit={{ opacity: 0, y: isTop ? 10 : -10, scale: 0.8 }}
             className={cn(
               "absolute bg-slate-800 text-white text-xs px-3 py-1 rounded-full shadow-lg border border-slate-600 font-bold tracking-wider z-20 flex items-center gap-1",
-              isTop ? "-bottom-10" : "-top-10"
+              isTop ? "-bottom-24" : "-top-24"
             )}
           >
             <div className="w-2 h-2 rounded-full bg-yellow-400 mr-1" />
@@ -111,7 +111,7 @@ export const PlayerSeat: React.FC<Props> = ({ player, isCurrentActor, isDealer, 
              transition={{ type: "spring", stiffness: 200, damping: 20 }}
              className={cn(
                "flex gap-1 absolute z-10",
-               isTop ? "-bottom-14 sm:-bottom-16 mt-2" : "-top-14 sm:-top-16 mb-2"
+               isTop ? "-bottom-14 sm:-bottom-16" : "-top-14 sm:-top-16"
              )}
           >
             <PlayingCard card={player.cards[0]} hidden={player.isBot} className="-rotate-6 hover:rotate-0 transition-transform origin-bottom-right" delay={0.1} />
@@ -131,8 +131,8 @@ export const PlayerSeat: React.FC<Props> = ({ player, isCurrentActor, isDealer, 
                isTop ? "-bottom-12 sm:-bottom-14" : "-top-12 sm:-top-14"
              )}
           >
-             <PlayingCard card={player.cards[0]} hidden={true} className="-rotate-12" />
-             <PlayingCard card={player.cards[1]} hidden={true} className="rotate-0" />
+             <PlayingCard card={player.cards[0]} hidden={player.isBot} className="-rotate-12" />
+             <PlayingCard card={player.cards[1]} hidden={player.isBot} className="rotate-0" />
           </motion.div>
         )}
       </AnimatePresence>
@@ -172,15 +172,15 @@ export const PlayerSeat: React.FC<Props> = ({ player, isCurrentActor, isDealer, 
           isWinner ? "bg-yellow-600 border-yellow-400" :
           isCurrentActor && !player.isBot ? "bg-slate-700" :
           isCurrentActor && player.isBot ? "bg-slate-700" : "border-slate-600 bg-slate-800",
-          player.hasFolded ? "opacity-40 grayscale" : "opacity-100",
-          player.isActive ? "" : "hidden"
+          !player.isActive ? "opacity-30 grayscale" : player.hasFolded ? "opacity-40 grayscale" : "opacity-100"
         )}
       >
         <div className="text-xs sm:text-sm font-bold truncate w-11/12 text-center text-slate-100">{player.name}</div>
         <div className="text-[10px] sm:text-xs font-mono text-emerald-400 mt-0.5">${player.chips}</div>
         
         {player.isAllIn && <div className="text-[9px] font-black text-red-500 uppercase mt-1 tracking-wider bg-red-500/20 px-2 py-0.5 rounded-full">Tất tay</div>}
-        {player.hasFolded && <div className="text-[9px] font-black text-slate-400 uppercase mt-1 tracking-wider">Đã bỏ bài</div>}
+        {player.hasFolded && player.isActive && <div className="text-[9px] font-black text-slate-400 uppercase mt-1 tracking-wider">Đã bỏ bài</div>}
+        {!player.isActive && <div className="text-[9px] font-black text-red-400 uppercase mt-1 tracking-wider">Đã bị loại</div>}
         
         {/* Buttons (Dealer / Blinds) */}
         <div className="absolute -bottom-2 flex gap-1">

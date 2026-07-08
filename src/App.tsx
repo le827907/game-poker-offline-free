@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameState, ActionType, Action } from './poker/types';
+import { GameState, ActionType, Action, Card } from './poker/types';
 import { initGame, startHand, processAction, STARTING_CHIPS } from './poker/engine';
 import { decideBotAction } from './poker/bot';
 import { PlayerSeat } from './components/PlayerSeat';
@@ -221,11 +221,12 @@ export default function App() {
     }
   }, [state?.handInProgress]);
 
-  const handleRebuy = () => {
-    soundManager.playRebuy();
+  const handleNewGame = () => {
+    setActionBadges({});
+    const diff = state ? state.difficulty : 'hard';
     localStorage.setItem('poker_bankroll', STARTING_CHIPS.toString());
     setBankroll(STARTING_CHIPS);
-    setState(initGame('Bạn', STARTING_CHIPS, difficulty));
+    setState(initGame('Bạn', STARTING_CHIPS, diff));
   };
 
   const handleStartPlay = () => {
@@ -238,6 +239,11 @@ export default function App() {
   };
 
   if (!state) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Đang tải...</div>;
+
+  const activePlayersCount = state.players.filter(p => p.chips > 0).length;
+  const isGameOver = activePlayersCount <= 1;
+  const humanPlayer = state.players[0];
+  const humanEliminated = !humanPlayer.isActive;
 
   const handleAction = (action: ActionType, amount?: number) => {
     if (!state) return;
@@ -260,6 +266,15 @@ export default function App() {
     "top-[15%] right-[-2%] sm:right-[-5%]",      // Top Right
     "top-[85%] right-[-2%] sm:right-[-5%]",      // Bottom Right
   ];
+
+  const allWinningCards = React.useMemo(() => {
+    if (!state || state.handInProgress || !state.winners) return [];
+    return state.winners.flatMap(w => w.winningCards || []);
+  }, [state?.winners, state?.handInProgress]);
+
+  const isCardWinning = (card: Card) => {
+    return allWinningCards.some(wc => wc.rank === card.rank && wc.suit === card.suit);
+  };
 
   return (
     <MotionConfig reducedMotion="user">
@@ -437,7 +452,12 @@ export default function App() {
               <div className="flex gap-2 h-24 items-center">
                 <AnimatePresence>
                   {state.board.map((card, i) => (
-                    <PlayingCard key={`${card.rank}-${card.suit}`} card={card} delay={i * 0.2 + 0.1} />
+                    <PlayingCard 
+                      key={`${card.rank}-${card.suit}`} 
+                      card={card} 
+                      delay={i * 0.2 + 0.1} 
+                      highlight={isCardWinning(card)}
+                    />
                   ))}
                 </AnimatePresence>
                 {/* Placeholders for un-dealt board cards */}
@@ -576,46 +596,51 @@ export default function App() {
                         </div>
                         {w.handCards && w.handCards.length === 2 && (
                           <div className="flex gap-2 mt-3">
-                             <PlayingCard card={w.handCards[0]} delay={0.2} />
-                             <PlayingCard card={w.handCards[1]} delay={0.4} />
+                             <PlayingCard card={w.handCards[0]} delay={0.2} highlight={w.winningCards?.some(wc => wc.rank === w.handCards[0].rank && wc.suit === w.handCards[0].suit)} />
+                             <PlayingCard card={w.handCards[1]} delay={0.4} highlight={w.winningCards?.some(wc => wc.rank === w.handCards[1].rank && wc.suit === w.handCards[1].suit)} />
                           </div>
                         )}
                       </div>
                     ))}
                   </div>
-                  {bankroll > 0 && (
-                    <button 
-                      onClick={handleNextHand}
-                      className="mt-6 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-4 rounded-lg shadow-lg text-lg transition-transform hover:scale-105 active:scale-95"
-                    >
-                      Ván Tiếp Theo
-                    </button>
+                  {humanEliminated && !isGameOver && (
+                    <div className="text-red-400 text-sm mt-4 font-bold p-3 bg-red-500/10 rounded-lg border border-red-500/20">
+                      Bạn đã hết chip và bị loại. Hãy xem các bot còn lại thi đấu đến khi tìm ra người thắng cuối cùng hoặc bắt đầu Game mới.
+                    </div>
+                  )}
+                  {isGameOver ? (
+                    <div className="mt-6 space-y-3">
+                      <div className="text-yellow-400 font-bold text-xl uppercase tracking-wider mb-2">
+                        Người chiến thắng cuối cùng: <br/> {state.players.find(p => p.chips > 0)?.name}
+                      </div>
+                      <button 
+                        onClick={handleNewGame}
+                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 px-4 rounded-lg shadow-lg text-lg transition-transform hover:scale-105 active:scale-95"
+                      >
+                        Game Mới
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mt-6 space-y-3">
+                      <button 
+                        onClick={handleNextHand}
+                        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-4 rounded-lg shadow-lg text-lg transition-transform hover:scale-105 active:scale-95"
+                      >
+                        Ván Tiếp Theo
+                      </button>
+                      {humanEliminated && (
+                        <button 
+                          onClick={handleNewGame}
+                          className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg text-sm transition-transform hover:scale-105 active:scale-95"
+                        >
+                          Bắt Đầu Game Mới
+                        </button>
+                      )}
+                    </div>
                   )}
                 </motion.div>
               </motion.div>
               </>
-            )}
-          </AnimatePresence>
-
-          {/* Rebuy Button overlay if bust */}
-          <AnimatePresence>
-            {!state.handInProgress && bankroll <= 0 && (
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-sm"
-              >
-                <div className="bg-slate-900 border border-slate-700 p-8 rounded-xl shadow-2xl text-center max-w-sm w-full mx-4">
-                  <h2 className="text-4xl font-black text-red-500 mb-2 uppercase tracking-widest">Hết Chip!</h2>
-                  <p className="text-slate-400 mb-8 text-lg">Bạn đã thua hết ngân lượng.</p>
-                  <button 
-                    onClick={handleRebuy}
-                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 px-8 rounded-xl shadow-[0_0_20px_rgba(5,150,105,0.4)] text-lg transition-transform hover:scale-105 active:scale-95"
-                  >
-                    Nạp lại $1000
-                  </button>
-                </div>
-              </motion.div>
             )}
           </AnimatePresence>
 

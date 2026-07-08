@@ -8,7 +8,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export const PlayingCard: React.FC<{ card?: CardType, hidden?: boolean, className?: string, delay?: number }> = ({ card, hidden, className, delay = 0 }) => {
+export const PlayingCard: React.FC<{ card?: CardType, hidden?: boolean, className?: string, delay?: number, highlight?: boolean }> = ({ card, hidden, className, delay = 0, highlight = false }) => {
   if (hidden || !card) {
     return (
       <motion.div 
@@ -38,6 +38,7 @@ export const PlayingCard: React.FC<{ card?: CardType, hidden?: boolean, classNam
       className={cn(
         "w-10 h-14 sm:w-14 sm:h-20 rounded-md border border-slate-300 bg-white flex flex-col justify-between p-1 shadow-lg font-bold text-sm sm:text-lg select-none relative overflow-hidden", 
         isRed ? "text-red-600" : "text-slate-900", 
+        highlight ? "ring-2 ring-yellow-400 ring-offset-2 ring-offset-slate-900 z-50 scale-110 shadow-[0_0_15px_rgba(250,204,21,0.8)]" : "",
         className
       )}
     >
