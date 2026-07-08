@@ -104,14 +104,28 @@ export function startHand(state: GameState): GameState {
     utgIdx = (utgIdx + 1) % players.length;
   }
 
+  // Calculate blind progression every 5 hands
+  const nextHandsPlayed = state.humanStats.handsPlayed;
+  const blindLevel = Math.floor(nextHandsPlayed / 5);
+  const multipliers = [1, 2, 4, 8, 15, 30, 50, 100, 200, 500];
+  const multiplier = multipliers[Math.min(blindLevel, multipliers.length - 1)];
+  
+  const currentSb = SMALL_BLIND * multiplier;
+  const currentBb = BIG_BLIND * multiplier;
+  
+  let historyMessage = 'Ván bài mới bắt đầu.';
+  if (nextHandsPlayed > 0 && nextHandsPlayed % 5 === 0) {
+    historyMessage = `Ván bài mới bắt đầu. Mức cược tăng lên ${currentSb}/${currentBb}!`;
+  }
+
   // Post blinds
-  const sbAmount = Math.min(players[sbIdx].chips, state.smallBlind);
+  const sbAmount = Math.min(players[sbIdx].chips, currentSb);
   players[sbIdx].chips -= sbAmount;
   players[sbIdx].currentBet = sbAmount;
   players[sbIdx].totalInvestment = sbAmount;
   players[sbIdx].isAllIn = players[sbIdx].chips === 0;
 
-  const bbAmount = Math.min(players[bbIdx].chips, state.bigBlind);
+  const bbAmount = Math.min(players[bbIdx].chips, currentBb);
   players[bbIdx].chips -= bbAmount;
   players[bbIdx].currentBet = bbAmount;
   players[bbIdx].totalInvestment = bbAmount;
@@ -131,12 +145,14 @@ export function startHand(state: GameState): GameState {
     deck,
     pot,
     pots: [],
-    currentHighestBet: state.bigBlind,
+    currentHighestBet: currentBb,
     street: 'preflop',
-    handHistory: ['Ván bài mới bắt đầu.'],
-    minRaise: state.bigBlind * 2,
+    handHistory: [historyMessage],
+    minRaise: currentBb * 2,
     handInProgress: true,
     winners: [],
+    smallBlind: currentSb,
+    bigBlind: currentBb,
     humanStats: {
       ...state.humanStats,
       handsPlayed: state.humanStats.handsPlayed + 1

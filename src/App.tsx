@@ -246,7 +246,7 @@ export default function App() {
       wins: 0,
       startingChips: STARTING_CHIPS,
     });
-    setState(initGame('Bạn', STARTING_CHIPS, diff));
+    setState(startHand(initGame('Bạn', STARTING_CHIPS, diff)));
   };
 
   const allWinningCards = React.useMemo(() => {
