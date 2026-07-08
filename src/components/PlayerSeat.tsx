@@ -16,9 +16,10 @@ interface Props {
   isWinner?: boolean;
   winAmount?: number;
   isSplit?: boolean;
+  handStrength?: string | null;
 }
 
-export const PlayerSeat: React.FC<Props> = ({ player, isCurrentActor, isDealer, isSmallBlind, isBigBlind, positionClass, isTop, actionBadge, isThinking, isWinner, winAmount, isSplit }) => {
+export const PlayerSeat: React.FC<Props> = ({ player, isCurrentActor, isDealer, isSmallBlind, isBigBlind, positionClass, isTop, actionBadge, isThinking, isWinner, winAmount, isSplit, handStrength }) => {
   return (
     <div className={cn("absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center", positionClass)}>
       
@@ -116,6 +117,16 @@ export const PlayerSeat: React.FC<Props> = ({ player, isCurrentActor, isDealer, 
           >
             <PlayingCard key={player.cards[0].id || `${player.cards[0].rank}-${player.cards[0].suit}`} card={player.cards[0]} hidden={player.isBot} className="-rotate-6 hover:rotate-0 transition-transform origin-bottom-right" delay={0.1} />
             <PlayingCard key={player.cards[1].id || `${player.cards[1].rank}-${player.cards[1].suit}`} card={player.cards[1]} hidden={player.isBot} className="rotate-6 hover:rotate-0 transition-transform origin-bottom-left" delay={0.2} />
+            
+            {handStrength && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="absolute top-full mt-2 left-1/2 -translate-x-1/2 whitespace-nowrap bg-emerald-900/90 border border-emerald-500/50 text-emerald-300 text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded shadow-lg backdrop-blur-sm tracking-wide"
+              >
+                {handStrength}
+              </motion.div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

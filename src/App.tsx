@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GameState, ActionType, Action, Card } from './poker/types';
 import { initGame, startHand, processAction, STARTING_CHIPS } from './poker/engine';
+import { evaluateHand, translateHandDescr } from './poker/evaluator';
 import { decideBotAction } from './poker/bot';
 import { PlayerSeat } from './components/PlayerSeat';
 import { ActionBar } from './components/ActionBar';
@@ -63,6 +64,11 @@ const RulesModal = ({ onClose }: { onClose: () => void }) => (
 export default function App() {
   const [state, setState] = useState<GameState | null>(null);
   const [bankroll, setBankroll] = useState(5000);
+  const [sessionStats, setSessionStats] = useState({
+    handsPlayed: 0,
+    wins: 0,
+    startingChips: 5000,
+  });
   const [showStartScreen, setShowStartScreen] = useState(true);
   const [showRules, setShowRules] = useState(false);
   const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard' | 'expert'>('expert');
@@ -179,6 +185,7 @@ export default function App() {
     const savedBankroll = localStorage.getItem('poker_bankroll');
     const initialChips = savedBankroll ? Number(savedBankroll) : STARTING_CHIPS;
     setBankroll(initialChips);
+    setSessionStats(prev => ({ ...prev, startingChips: initialChips }));
     
     // Init game
     setState(initGame('Bạn', initialChips, difficulty));
@@ -213,10 +220,18 @@ export default function App() {
   useEffect(() => {
     if (state && !state.handInProgress && state.handHistory.length > 1) {
       // Hand just finished, update bankroll
-      const player = state.players.find(p => !p.isBot);
+      const playerIndex = state.players.findIndex(p => !p.isBot);
+      const player = state.players[playerIndex];
       if (player) {
         localStorage.setItem('poker_bankroll', player.chips.toString());
         setBankroll(player.chips);
+
+        const isWinner = state.winners.some(w => w.playerIndex === playerIndex);
+        setSessionStats(prev => ({
+          ...prev,
+          handsPlayed: prev.handsPlayed + 1,
+          wins: prev.wins + (isWinner ? 1 : 0),
+        }));
       }
     }
   }, [state?.handInProgress]);
@@ -226,8 +241,29 @@ export default function App() {
     const diff = state ? state.difficulty : 'hard';
     localStorage.setItem('poker_bankroll', STARTING_CHIPS.toString());
     setBankroll(STARTING_CHIPS);
+    setSessionStats({
+      handsPlayed: 0,
+      wins: 0,
+      startingChips: STARTING_CHIPS,
+    });
     setState(initGame('Bạn', STARTING_CHIPS, diff));
   };
+
+  const allWinningCards = React.useMemo(() => {
+    if (!state || state.handInProgress || !state.winners) return [];
+    return state.winners.flatMap(w => w.winningCards || []);
+  }, [state?.winners, state?.handInProgress]);
+
+  const currentHandStrength = React.useMemo(() => {
+    if (!state || !state.handInProgress || !state.players[0].cards || state.players[0].cards.length < 2) return null;
+    if (state.players[0].hasFolded) return null;
+    try {
+      const evalResult = evaluateHand(state.players[0].cards, state.board);
+      return translateHandDescr(evalResult.descr, evalResult.name);
+    } catch (e) {
+      return null;
+    }
+  }, [state?.board, state?.players[0]?.cards, state?.handInProgress, state?.players[0]?.hasFolded]);
 
   const handleStartPlay = () => {
     soundManager.init();
@@ -237,11 +273,6 @@ export default function App() {
       handleNextHand();
     }
   };
-
-  const allWinningCards = React.useMemo(() => {
-    if (!state || state.handInProgress || !state.winners) return [];
-    return state.winners.flatMap(w => w.winningCards || []);
-  }, [state?.winners, state?.handInProgress]);
 
   if (!state) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Đang tải...</div>;
 
@@ -264,10 +295,10 @@ export default function App() {
 
   // Seat positions for 6-max around an oval table
   const seatPositions = [
-    "top-[100%] sm:top-[105%] left-1/2",         // Bottom (Player)
+    "top-[115%] sm:top-[125%] left-1/2",         // Bottom (Player)
     "top-[85%] left-[-2%] sm:left-[-5%]",        // Bottom Left
     "top-[15%] left-[-2%] sm:left-[-5%]",        // Top Left
-    "top-[0%] sm:top-[-5%] left-1/2",            // Top
+    "top-[-15%] sm:top-[-25%] left-1/2",            // Top
     "top-[15%] right-[-2%] sm:right-[-5%]",      // Top Right
     "top-[85%] right-[-2%] sm:right-[-5%]",      // Bottom Right
   ];
@@ -420,7 +451,7 @@ export default function App() {
       <main className="flex-1 relative p-4 sm:p-8 flex flex-col md:flex-row gap-4 sm:gap-8 overflow-y-auto overflow-x-hidden custom-scrollbar">
         
         {/* Table Canvas */}
-        <div className="flex-1 relative flex items-center justify-center min-h-[400px] sm:min-h-[500px] py-16 px-6 sm:px-20">
+        <div className="flex-1 relative flex items-center justify-center min-h-[500px] sm:min-h-[600px] py-24 px-6 sm:px-20">
           {/* Felt */}
           <div className="relative w-full max-w-5xl aspect-[1.8/1] sm:aspect-[2.5/1] table-surface rounded-[120px] sm:rounded-[200px] border-[8px] sm:border-[16px] border-slate-800 shadow-[inset_0_0_80px_rgba(0,0,0,0.6)]">
             
@@ -489,6 +520,7 @@ export default function App() {
                   isWinner={isWinner}
                   winAmount={winAmount}
                   isSplit={isSplit}
+                  handStrength={i === 0 ? currentHandStrength : null}
                 />
               );
             })}
@@ -515,10 +547,10 @@ export default function App() {
                    } else if (anim.type === 'burst') {
                      let targetTop = '85%';
                      let targetLeft = '100%';
-                     if (posClass.includes('top-[100%]')) { targetTop = '100%'; targetLeft = '50%'; }
+                     if (posClass.includes('top-[115%]')) { targetTop = '115%'; targetLeft = '50%'; }
                      else if (posClass.includes('top-[85%] left')) { targetTop = '85%'; targetLeft = '0%'; }
                      else if (posClass.includes('top-[15%] left')) { targetTop = '15%'; targetLeft = '0%'; }
-                     else if (posClass.includes('top-[0%]')) { targetTop = '0%'; targetLeft = '50%'; }
+                     else if (posClass.includes('top-[-15%]')) { targetTop = '-15%'; targetLeft = '50%'; }
                      else if (posClass.includes('top-[15%] right')) { targetTop = '15%'; targetLeft = '100%'; }
 
                      return (
@@ -659,16 +691,49 @@ export default function App() {
 
         </div>
 
-        {/* Hand History Panel */}
-        <div className="w-full md:w-80 bg-slate-900 border border-slate-800 rounded-xl flex flex-col h-64 md:h-full md:max-h-[600px] shadow-xl overflow-hidden shrink-0">
-          <div className="p-4 border-b border-slate-800 bg-slate-900 flex justify-between items-center">
-            <h3 className="font-bold text-slate-200 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-              Lịch sử
+        {/* Sidebar (Stats & History) */}
+        <div className="w-full md:w-80 flex flex-col gap-4 shrink-0 h-[500px] md:h-full md:max-h-[600px]">
+          
+          {/* Statistics Panel */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl shrink-0">
+            <h3 className="font-bold text-slate-200 mb-3 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              Thống kê phiên chơi
             </h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Số ván đã chơi:</span>
+                <span className="text-white font-medium">{sessionStats.handsPlayed}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Số ván thắng:</span>
+                <span className="text-white font-medium">{sessionStats.wins}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Tổng lời/lỗ:</span>
+                <span className={`font-bold ${(bankroll - sessionStats.startingChips) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {(bankroll - sessionStats.startingChips) >= 0 ? '+' : '-'}${Math.abs(bankroll - sessionStats.startingChips)}
+                </span>
+              </div>
+              <button 
+                onClick={handleNewGame}
+                className="w-full mt-3 bg-slate-800 hover:bg-slate-700 text-white font-medium py-2 px-4 rounded text-xs transition-colors border border-slate-700"
+              >
+                Khởi động lại Game (Reset Tiền)
+              </button>
+            </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 flex flex-col-reverse custom-scrollbar">
-            {[...state.handHistory].reverse().map((log, i) => {
+
+          {/* Hand History Panel */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl flex flex-col flex-1 shadow-xl overflow-hidden min-h-[250px]">
+            <div className="p-4 border-b border-slate-800 bg-slate-900 flex justify-between items-center shrink-0">
+              <h3 className="font-bold text-slate-200 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                Lịch sử
+              </h3>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 flex flex-col-reverse custom-scrollbar">
+              {[...state.handHistory].reverse().map((log, i) => {
               const isHighlight = log.includes("thắng") || log.includes("tất tay") || log.includes("Trả lại");
               return (
                 <div 
@@ -686,6 +751,7 @@ export default function App() {
               );
             })}
           </div>
+        </div>
         </div>
 
       </main>

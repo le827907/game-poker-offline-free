@@ -293,7 +293,9 @@ export function processAction(state: GameState, action: ActionType, amount?: num
 }
 
 function advanceStreet(state: GameState): GameState {
-  let { street, deck, board, handHistory, players } = state;
+  let { street, board, players } = state;
+  let deck = [...state.deck];
+  let handHistory = [...state.handHistory];
 
   // reset current bets
   players = players.map(p => ({ ...p, currentBet: 0, hasActed: false }));
