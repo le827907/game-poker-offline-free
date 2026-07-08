@@ -368,12 +368,31 @@ function advanceStreet(state: GameState): GameState {
 }
 
 function executeShowdown(state: GameState): GameState {
-  const pots = calculatePots(state.players);
   let players = [...state.players];
   let handHistory = [...state.handHistory];
   let winnersLog: any[] = [];
   
   const activePlayers = players.filter(p => p.isActive && !p.hasFolded);
+
+  if (activePlayers.length === 1) {
+    const winner = activePlayers[0];
+    const playerIdx = players.findIndex(p => p.id === winner.id);
+    players[playerIdx].chips += state.pot;
+    handHistory.push(`${winner.name} thắng $${state.pot} (các đối thủ khác bỏ bài).`);
+    winnersLog.push({ playerIndex: playerIdx, amount: state.pot, description: 'Đối thủ bỏ bài', handCards: winner.cards });
+    
+    return {
+      ...state,
+      players,
+      handHistory,
+      street: 'showdown',
+      handInProgress: false,
+      winners: winnersLog,
+      pots: [{ amount: state.pot, eligiblePlayerIds: [winner.id] }]
+    };
+  }
+
+  const pots = calculatePots(state.players);
 
   pots.forEach((pot, index) => {
     if (pot.amount === 0) return;
