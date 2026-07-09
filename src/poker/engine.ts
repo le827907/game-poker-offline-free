@@ -288,14 +288,23 @@ export function processAction(state: GameState, action: ActionType, amount?: num
     return executeShowdown({ ...state, players: newPlayers, pot, handHistory, currentHighestBet, minRaise, humanStats });
   }
 
+  const roundShouldEnd = newPlayers.every(p => {
+    if (!p.isActive || p.hasFolded || p.isAllIn) return true;
+    return p.hasActed && p.currentBet === currentHighestBet;
+  });
+
   const canActCount = countPlayersCanAct(newPlayers);
   
-  if (state.currentActorIndex === state.lastActorIndex || canActCount === 0) {
+  if (roundShouldEnd || canActCount === 0) {
     return advanceStreet({ ...state, players: newPlayers, pot, handHistory, currentHighestBet, minRaise, humanStats });
   }
 
   const nextActor = getNextActivePlayer(newPlayers, state.currentActorIndex);
   
+  if (nextActor === -1) {
+    return advanceStreet({ ...state, players: newPlayers, pot, handHistory, currentHighestBet, minRaise, humanStats });
+  }
+
   return {
     ...state,
     players: newPlayers,
@@ -377,7 +386,7 @@ function executeShowdown(state: GameState): GameState {
   if (activePlayers.length === 1) {
     const winner = activePlayers[0];
     const playerIdx = players.findIndex(p => p.id === winner.id);
-    players[playerIdx].chips += state.pot;
+    players[playerIdx] = { ...players[playerIdx], chips: players[playerIdx].chips + state.pot };
     handHistory.push(`${winner.name} thắng $${state.pot} (các đối thủ khác bỏ bài).`);
     winnersLog.push({ playerIndex: playerIdx, amount: state.pot, description: 'Đối thủ bỏ bài', handCards: winner.cards });
     
@@ -432,7 +441,7 @@ function executeShowdown(state: GameState): GameState {
           gotOddChip = true;
         }
 
-        players[playerIdx].chips += amountWon;
+        players[playerIdx] = { ...players[playerIdx], chips: players[playerIdx].chips + amountWon };
         const player = players[playerIdx];
         const oddChipText = gotOddChip ? " (nhận chip lẻ)" : "";
         handHistory.push(`${player.name} thắng ${amountWon} chip với ${w.description}${oddChipText}.`);

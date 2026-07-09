@@ -364,7 +364,7 @@ export default function App() {
   const handleAction = (action: ActionType, amount?: number) => {
     if (!state || !state.handInProgress) return;
     const actor = state.players[state.currentActorIndex];
-    if (actor.isBot) return; // Prevent human from forcing bot actions
+    if (!actor || actor.isBot) return; // Prevent human from forcing bot actions
     
     soundManager.playButton();
     showActionBadge(actor.id, action, amount);
