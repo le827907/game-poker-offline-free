@@ -248,7 +248,12 @@ export default function App() {
     if (!state || !state.handInProgress) return;
 
     const actor = state.players[state.currentActorIndex];
-    if (actor.isBot) {
+    if (actor && actor.isBot) {
+      // Security bounds: Prevent folded, inactive, or all-in bots from acting
+      if (actor.hasFolded || !actor.isActive || actor.isAllIn) {
+        return;
+      }
+
       if (isBotActing.current) return;
       isBotActing.current = true;
       setIsBotThinking(true);
@@ -357,9 +362,12 @@ export default function App() {
   const humanEliminated = !humanPlayer.isActive;
 
   const handleAction = (action: ActionType, amount?: number) => {
-    if (!state) return;
-    const actorId = state.players[state.currentActorIndex].id;
-    showActionBadge(actorId, action, amount);
+    if (!state || !state.handInProgress) return;
+    const actor = state.players[state.currentActorIndex];
+    if (actor.isBot) return; // Prevent human from forcing bot actions
+    
+    soundManager.playButton();
+    showActionBadge(actor.id, action, amount);
     setState(prev => prev ? processAction(prev, action, amount) : prev);
   };
 
